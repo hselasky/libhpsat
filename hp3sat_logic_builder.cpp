@@ -46,7 +46,7 @@ hpsat_logic_builder_init(size_t maxvar)
 void
 hpsat_logic_builder_finish(void)
 {
-	hpsat_free_bitmaps(&hpsat_lb.head);
+	hpsat_free(&hpsat_lb.head);
 }
 
 variable_t

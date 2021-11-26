@@ -128,6 +128,6 @@ int main()
 		square_equation(&eq);
 	}
 
-	hpsat_free_xormaps(&eq);
+	hpsat_free(&eq);
 	return (0);
 }

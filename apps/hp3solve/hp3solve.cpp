@@ -135,10 +135,10 @@ main(int argc, char **argv)
 		printf("s SOLUTIONS %zu\n", nsol);
 	}
 skip:
-	hpsat_free_bitmaps(&head);
+	hpsat_free(&head);
 
-	hpsat_free_xormaps(&ahead);
-	hpsat_free_xormaps(&xhead);
+	hpsat_free(&ahead);
+	hpsat_free(&xhead);
 
 	delete [] psol;
 

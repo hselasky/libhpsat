@@ -54,7 +54,7 @@ hpsat_minvar(const XORMAP_HEAD_t *phead, hpsat_var_t limit)
 }
 
 void
-hpsat_free_xormaps(XORMAP_HEAD_t *phead)
+hpsat_free(XORMAP_HEAD_t *phead)
 {
 	XORMAP *px;
 
@@ -96,7 +96,7 @@ hpsat_sort_or(XORMAP_HEAD_t *phead)
 
 		if (pa->isOne()) {
 			pa->remove(phead);
-			hpsat_free_xormaps(phead);
+			hpsat_free(phead);
 			pa->insert_tail(phead);
 			goto done;
 		}

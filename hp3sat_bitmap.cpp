@@ -774,7 +774,7 @@ failure:
 	for (size_t y = x; y != count; y++)
 		delete pp[y];
 	delete [] pp;
-	hpsat_free_bitmaps(phead);
+	hpsat_free(phead);
 	(new BITMAP(true))->insert_tail(phead);
 	return (false);
 }
@@ -836,7 +836,7 @@ failure:
 	for (size_t y = x; y != count; y++)
 		delete pp[y];
 	delete [] pp;
-	hpsat_free_bitmaps(phead);
+	hpsat_free(phead);
 	(new BITMAP(false))->insert_tail(phead);
 	return (false);
 }
@@ -862,7 +862,7 @@ hpsat_sort_or(BITMAP_HEAD_t *phead)
 	count = 0;
 	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
 		if (pa->isOne()) {
-			hpsat_free_bitmaps(phead);
+			hpsat_free(phead);
 			(new BITMAP(true))->insert_tail(phead);
 			goto done;
 		}
@@ -919,7 +919,7 @@ hpsat_sort_and(BITMAP_HEAD_t *phead)
 	count = 0;
 	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
 		if (pa->isZero()) {
-			hpsat_free_bitmaps(phead);
+			hpsat_free(phead);
 			(new BITMAP(false))->insert_tail(phead);
 			goto done;
 		}
@@ -985,7 +985,7 @@ hpsat_minvar(const BITMAP_HEAD_t *phead, hpsat_var_t limit)
 }
 
 void
-hpsat_free_bitmaps(BITMAP_HEAD_t *phead)
+hpsat_free(BITMAP_HEAD_t *phead)
 {
 	BITMAP *pa;
 
@@ -1020,12 +1020,12 @@ hpsat_check_inversion(BITMAP_HEAD_t *phead)
 			ba = ba->next();
 			break;
 		default:
-			hpsat_free_bitmaps(phead);
-			hpsat_free_bitmaps(&temp);
+			hpsat_free(phead);
+			hpsat_free(&temp);
 			(new BITMAP(true))->insert_tail(phead);
 			return;
 		}
 	}
 
-	hpsat_free_bitmaps(&temp);
+	hpsat_free(&temp);
 }

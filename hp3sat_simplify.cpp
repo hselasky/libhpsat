@@ -145,7 +145,7 @@ hpsat_simplify_or(BITMAP_HEAD_t *phead, BITMAP_HEAD_t *psub)
 	return;
 err_one:
 	pa->remove(phead);
-	hpsat_free_bitmaps(phead);
+	hpsat_free(phead);
 	pa->insert_tail(phead);
 }
 
@@ -234,7 +234,7 @@ hpsat_simplify_and(BITMAP_HEAD_t *phead, BITMAP_HEAD_t *psub)
 	return;
 err_zero:
 	pa->remove(phead);
-	hpsat_free_bitmaps(phead);
+	hpsat_free(phead);
 	pa->insert_tail(phead);
 }
 
@@ -319,7 +319,7 @@ hpsat_simplify_or(ANDMAP_HEAD_t *phead, ANDMAP_HEAD_t *psub)
 	return;
 err_one:
 	pa->remove(phead);
-	hpsat_free_andmaps(phead);
+	hpsat_free(phead);
 	pa->insert_tail(phead);
 }
 
@@ -400,8 +400,8 @@ hpsat_simplify_or(XORMAP_HEAD_t *xhead)
 	return;
 err_one:
 	xa->remove(xhead);
-	hpsat_free_xormaps(xhead);
-	hpsat_free_xormaps(&last);
+	hpsat_free(xhead);
+	hpsat_free(&last);
 	xa->insert_tail(xhead);
 }
 
@@ -459,7 +459,7 @@ hpsat_simplify_defactor(XORMAP_HEAD_t *xhead)
 	return;
 err_one:
 	xa->remove(xhead);
-	hpsat_free_xormaps(xhead);
+	hpsat_free(xhead);
 	xa->insert_tail(xhead);
 }
 
@@ -559,7 +559,7 @@ hpsat_simplify_factor(XORMAP_HEAD_t *xhead, ANDMAP_HEAD_t *phead)
 		any = true;
 	}
 done:
-	hpsat_free_andmaps(&copy);
+	hpsat_free(&copy);
 	return (any);
 }
 
@@ -590,8 +590,8 @@ hpsat_simplify_factor(XORMAP_HEAD_t *xhead)
 	return;
 err_one:
 	xa->remove(&added);
-	hpsat_free_xormaps(&added);
-	hpsat_free_xormaps(xhead);
+	hpsat_free(&added);
+	hpsat_free(xhead);
 	xa->insert_tail(xhead);
 }
 
@@ -604,7 +604,7 @@ hpsat_substitute(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t v, con
 	if (expr.isZero()) {
 		return;
 	} else if (expr.isOne()) {
-		hpsat_free_xormaps(xhead);
+		hpsat_free(xhead);
 		(new XORMAP(expr))->insert_head(xhead);
 		return;
 	}
@@ -628,7 +628,7 @@ hpsat_substitute(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t v, con
 	return;
 err_one:
 	xa->remove(xhead);
-	hpsat_free_xormaps(xhead);
+	hpsat_free(xhead);
 	xa->insert_tail(xhead);
 }
 
@@ -805,7 +805,7 @@ hpsat_simplify_deriv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 
 err_one:
 	xa->remove(xhead);
-	hpsat_free_xormaps(xhead);
+	hpsat_free(xhead);
 	xa->insert_tail(xhead);
 	return (false);
 }
@@ -995,7 +995,7 @@ hpsat_simplify_all(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t vmax
 	}
 
 	for (v = 0; v != 2 * vmax; v++)
-		hpsat_free_bitmaps(prod_head + v);
+		hpsat_free(prod_head + v);
 
 	return (retval);
 }
@@ -1289,7 +1289,7 @@ hpsat_simplify_find_zeros(XORMAP_HEAD_t *xhead)
 		}
 	}
 
-	hpsat_free_bitmaps(&xmap);
+	hpsat_free(&xmap);
 	return (any);
 }
 
@@ -1414,7 +1414,7 @@ hpsat_simplify_variable_map(XORMAP_HEAD_t *xhead, BITMAP_HEAD_t *pvar)
 
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
 		if (xa->isOne()) {
-			hpsat_free_bitmaps(pvar);
+			hpsat_free(pvar);
 			return (true);
 		}
 
@@ -1545,11 +1545,11 @@ hpsat_simplify_symmetry(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, bool insert
 		}
 
 		for (uint8_t x = 0; x != 2; x++)
-			hpsat_free_bitmaps(sel + x);
+			hpsat_free(sel + x);
 	}
 	if (insert_all)
 		hpsat_sort_or(xhead);
 
-	hpsat_free_bitmaps(&vmap);
+	hpsat_free(&vmap);
 	return (changed);
 }

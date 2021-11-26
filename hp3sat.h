@@ -307,7 +307,7 @@ extern bool hpsat_sort_and(BITMAP_HEAD_t *);
 extern bool hpsat_squash_or(BITMAP_HEAD_t *);
 extern bool hpsat_squash_and(BITMAP_HEAD_t *);
 extern void hpsat_demux(BITMAP_HEAD_t *, hpsat_var_t *);
-extern void hpsat_free_bitmaps(BITMAP_HEAD_t *);
+extern void hpsat_free(BITMAP_HEAD_t *);
 extern void hpsat_check_inversion(BITMAP_HEAD_t *);
 
 extern int hpsat_loadcnf(std::istream &, BITMAP_HEAD_t *, hpsat_var_t * = 0, hpsat_var_t * = 0);
@@ -343,7 +343,7 @@ public:
 		(new BITMAP(var, value))->insert_tail(&head);
 	};
 	~ANDMAP() {
-		hpsat_free_bitmaps(&head);
+		hpsat_free(&head);
 	};
 	ANDMAP *dup(void) const {
 		return (new ANDMAP(*this));
@@ -393,7 +393,7 @@ public:
 	ANDMAP & operator =(const ANDMAP &other) {
 		if (this == &other)
 			return (*this);
-		hpsat_free_bitmaps(&head);
+		hpsat_free(&head);
 		for (BITMAP *pa = TAILQ_FIRST(&other.head); pa; pa = pa->next())
 			pa->dup()->insert_tail(&head);
 		return (*this);
@@ -561,7 +561,7 @@ extern void hpsat_merge(ANDMAP_HEAD_t *);
 extern bool hpsat_sort_or(ANDMAP_HEAD_t *);
 extern bool hpsat_sort_xor(ANDMAP_HEAD_t *);
 extern void hpsat_bitmap_to_andmap(const BITMAP_HEAD_t *, ANDMAP_HEAD_t *);
-extern void hpsat_free_andmaps(ANDMAP_HEAD_t *);
+extern void hpsat_free(ANDMAP_HEAD_t *);
 
 class XORMAP;
 typedef TAILQ_CLASS_HEAD(XORMAP_HEAD, XORMAP) XORMAP_HEAD_t;
@@ -597,7 +597,7 @@ public:
 		(new ANDMAP(var, value))->insert_tail(&head);
 	};
 	~XORMAP() {
-		hpsat_free_andmaps(&head);
+		hpsat_free(&head);
 	};
 	XORMAP *dup(void) const {
 		return (new XORMAP(*this));
@@ -693,7 +693,7 @@ public:
 	XORMAP & operator =(const XORMAP &other) {
 		if (this == &other)
 			return (*this);
-		hpsat_free_andmaps(&head);
+		hpsat_free(&head);
 		for (ANDMAP *pa = TAILQ_FIRST(&other.head); pa; pa = pa->next())
 			pa->dup()->insert_tail(&head);
 		return (*this);
@@ -823,7 +823,7 @@ extern size_t hpsat_numvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX, B
 extern void hpsat_demux(XORMAP_HEAD_t *, hpsat_var_t *);
 extern void hpsat_bitmap_to_xormap(const BITMAP_HEAD_t *, XORMAP_HEAD_t *);
 extern bool hpsat_sort_or(XORMAP_HEAD_t *);
-extern void hpsat_free_xormaps(XORMAP_HEAD_t *);
+extern void hpsat_free(XORMAP_HEAD_t *);
 extern void hpsat_merge(XORMAP_HEAD_t *);
 
 /* solve functions */

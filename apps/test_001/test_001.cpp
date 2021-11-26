@@ -103,8 +103,8 @@ int main()
 
 	printf("VALUE = %d\n", value);
 
-	hpsat_free_bitmaps(&head);
-	hpsat_free_xormaps(&ahead);
-	hpsat_free_xormaps(&shead);
+	hpsat_free(&head);
+	hpsat_free(&ahead);
+	hpsat_free(&shead);
 	return (0);
 }
