@@ -41,7 +41,7 @@ usage(void)
 	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-s] [-h]\n");
 }
 
-static void
+static bool
 solve_callback(void *arg, uint8_t *psol)
 {
 	printf("s SATISFIABLE\n" "v ");
@@ -53,6 +53,8 @@ solve_callback(void *arg, uint8_t *psol)
 	}
 	printf("0\n");
 	nsol++;
+
+	return (true);
 }
 
 int
@@ -118,14 +120,9 @@ main(int argc, char **argv)
 	}
 
 	if (count == 0) {
-		hpsat_solve_first(&xhead, psol);
-
-		/* verify solution */
-		for (BITMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
-			if (pa->expand_all(psol)) {
-				printf("UNSATISFIABLE\n");
-				goto skip;
-			}
+		if (hpsat_solve_first(&xhead, psol) == false) {
+			printf("UNSATISFIABLE\n");
+			goto skip;
 		}
 
 		solve_callback(0, psol);

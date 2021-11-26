@@ -828,13 +828,13 @@ extern void hpsat_merge(XORMAP_HEAD_t *);
 
 /* solve functions */
 
-typedef void (hpsat_solve_callback_t)(void *, uint8_t *);
+typedef bool (hpsat_solve_callback_t)(void *, uint8_t *);
 
 extern bool hpsat_solve(XORMAP_HEAD_t *, XORMAP_HEAD_t *, hpsat_var_t);
 extern void hpsat_solve_strip(XORMAP_HEAD_t *, XORMAP_HEAD_t *, hpsat_var_t, hpsat_var_t);
 extern bool hpsat_solve_first(XORMAP_HEAD_t *, uint8_t *);
 extern size_t hpsat_solve_count(XORMAP_HEAD_t *, uint8_t *);
-extern void hpsat_solve_callback(XORMAP *, uint8_t *, hpsat_solve_callback_t *, void *);
+extern bool hpsat_solve_callback(XORMAP *, uint8_t *, hpsat_solve_callback_t *, void *);
 extern void hpsat_solve_to_equation(XORMAP_HEAD_t *, XORMAP_HEAD_t *);
 
 /* simplify functions */

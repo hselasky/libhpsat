@@ -128,39 +128,33 @@ solve:
 	return (TAILQ_FIRST(xhead) != 0);
 }
 
-void
+bool
 hpsat_solve_callback(XORMAP *xm, uint8_t *psol, hpsat_solve_callback_t *cb, void *arg)
 {
 	XORMAP *xa;
 
-	if (xm == NULL) {
-		cb(arg, psol);
-		return;
-	}
+	if (xm == NULL)
+		return (cb(arg, psol));
 
 	const hpsat_var_t v = xm->first()->first()->pvar[0];
 
-	psol[v] = 0;
-
-	for (xa = xm->next(); !xa->isZero(); xa = xa->next())
-		psol[v] |= xa->expand_all(psol);
-
-	if (psol[v] == 0)
-		hpsat_solve_callback(xa->next(), psol, cb, arg);
-
-	psol[v] = 1;
-
-	for (xa = xm->next(); !xa->isZero(); xa = xa->next())
-		psol[v] &= !xa->expand_all(psol);
-
-	if (psol[v] == 1)
-		hpsat_solve_callback(xa->next(), psol, cb, arg);
+	for (psol[v] = 0; psol[v] != 2; psol[v]++) {
+		for (xa = xm->next(); !xa->isZero(); xa = xa->next()) {
+			if (xa->expand_all(psol))
+				goto next;
+		}
+		if (hpsat_solve_callback(xa->next(), psol, cb, arg) == false)
+			return (false);
+	next:;
+	}
+	return (true);
 }
 
-static void
+static bool
 hpsat_solve_do_count(void *arg, uint8_t *)
 {
 	(*(size_t *)arg)++;
+	return (true);
 }
 
 size_t
