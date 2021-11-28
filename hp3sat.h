@@ -690,6 +690,7 @@ public:
 		}
 		return (false);
 	};
+	XORMAP & defactor();
 	XORMAP & substitute(hpsat_var_t var, const BITMAP &expr);
 	XORMAP & substitute(hpsat_var_t var, const XORMAP &expr);
 	XORMAP & operator =(const XORMAP &other) {
@@ -701,7 +702,7 @@ public:
 		return (*this);
 	};
 	bool isXorAble(hpsat_var_t) const;
-	XORMAP & xored(const XORMAP &, hpsat_var_t);
+	const XORMAP & xored(const XORMAP &, hpsat_var_t, XORMAP_HEAD_t *) const;
 	XORMAP & sort();
 
 	BITMAP toBitmap() const {

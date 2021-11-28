@@ -238,22 +238,48 @@ XORMAP :: isXorAble(hpsat_var_t var) const
 }
 
 XORMAP &
-XORMAP :: xored(const XORMAP &other, hpsat_var_t var)
+XORMAP :: defactor()
+{
+	hpsat_simplify_defactor(&head);
+	return (sort());
+}
+
+const XORMAP &
+XORMAP :: xored(const XORMAP &other, hpsat_var_t var, XORMAP_HEAD_t *xhead) const
 {
 	XORMAP temp[4] = { *this, *this, other, other };
+	XORMAP *xn;
 
 	temp[0].expand(var, false);
 	temp[1].expand(var, true);
 	temp[2].expand(var, false);
 	temp[3].expand(var, true);
 
-	*this = (temp[0] & temp[3]) | (temp[1] & temp[2]) |
-		(temp[0] & temp[1]) | (temp[2] & temp[3]);
-
-	if (hpsat_simplify_defactor(&head))
-		return (sort());
+	xn = new XORMAP(temp[0] & temp[3]);
+	if (xn->defactor().isZero())
+		delete xn;
 	else
-		return (*this);
+		xn->insert_tail(xhead);
+
+	xn = new XORMAP(temp[1] & temp[2]);
+	if (xn->defactor().isZero())
+		delete xn;
+	else
+		xn->insert_tail(xhead);
+
+	xn = new XORMAP(temp[0] & temp[1]);
+	if (xn->defactor().isZero())
+		delete xn;
+	else
+		xn->insert_tail(xhead);
+
+	xn = new XORMAP(temp[2] & temp[3]);
+	if (xn->defactor().isZero())
+		delete xn;
+	else
+		xn->insert_tail(xhead);
+
+	return (*this);
 }
 
 void
