@@ -288,8 +288,28 @@ hpsat_merge(XORMAP_HEAD_t *phead)
 	XORMAP *pa;
 	XORMAP *pb;
 	XORMAP *pn;
+	XORMAP *pm;
+
 	bool found;
+
 repeat:
+	for (pa = TAILQ_FIRST(phead); pa; pa = pn) {
+		pn = pa->next();
+		for (pb = pn; pb; pb = pm) {
+			pm = pb->next();
+
+			XORMAP temp(*pa & *pb);
+			if (temp == *pa) {
+				delete pa->remove(phead);
+				break;
+			} else if (temp == *pb) {
+				delete pb->remove(phead);
+				if (pn == pb)
+					pn = pm;
+			}
+		}
+	}
+
 	found = false;
 	for (pa = TAILQ_FIRST(phead); pa; pa = pn) {
 		pn = pa->next();
