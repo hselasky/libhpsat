@@ -43,27 +43,51 @@ hpsat_solve(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t vm)
 			goto solve;
 	}
 
-loop:
-	hpsat_sort_or(xhead);
+	do {
+		hpsat_sort_or(xhead);
 
-	hpsat_simplify_all(xhead, pderiv, vm);
+		hpsat_simplify_all(xhead, pderiv, vm);
 
-	hpsat_underiv(xhead, pderiv);
+		hpsat_underiv(xhead, pderiv);
 
-	do_loop = hpsat_simplify_deriv(xhead, pderiv);
+		do_loop = hpsat_simplify_deriv(xhead, pderiv);
 
-	hpsat_underiv(xhead, pderiv);
+		hpsat_underiv(xhead, pderiv);
+	} while (do_loop);
 
-	if (do_loop)
-		goto loop;
 solve:
-	for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
+	TAILQ_INIT(&temp);
+
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
-		if (!xa->isXorConst())
-			xa->xorify();
+
+		if (xa->isXorConst()) {
+			xa->remove(xhead)->insert_tail(&temp);
+		} else {
+			(new XORMAP(xa->toBitmap().toXorMap()))->insert_tail(&temp);
+			delete xa->remove(xhead);
+		}
+	}
+
+	TAILQ_CONCAT(xhead, &temp, entry);
+
+	while (hpsat_simplify_xormap(xhead, pderiv))
+		;
+
+	uint8_t taken[(vm + 7) / 8];
+	memset(taken, 0, sizeof(taken));
+
+	for (xa = TAILQ_FIRST(pderiv); xa != 0; xa = xa->next()) {
+		hpsat_var_t v = xa->maxVar();
+		taken[v / 8] |= (1 << (v % 8));
+
+		for (xa = xa->next(); !xa->isZero(); xa = xa->next())
+			;
 	}
 
 	for (hpsat_var_t v = vm; v--; ) {
+		if (taken[v / 8] & (1 << (v % 8)))
+			continue;
 
 		XORMAP_HEAD_t ahead;
 		XORMAP_HEAD_t thead;
@@ -78,7 +102,8 @@ solve:
 
 		}
 
-		hpsat_sort_or(&ahead);
+		while (hpsat_simplify_xormap(&ahead, 0))
+			;
 
 		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xa->next()) {
 			if (xa->isZero())
@@ -86,12 +111,7 @@ solve:
 			for (xb = xa->next(); xb != 0; xb = xb->next()) {
 				if (xb->isZero())
 					continue;
-				xn = new XORMAP(ANDMAP(*xa->first()).xored(*xb->first(), v));
-
-				if (xn->sort().isZero())
-					delete xn;
-				else
-					xn->insert_tail(&thead);
+				xa->xored(*xb, v, &thead);
 			}
 		}
 
