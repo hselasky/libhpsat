@@ -683,7 +683,23 @@ public:
 		}
 		return (false);
 	};
-	bool contains(const ANDMAP &var) const {
+	bool contains(const ANDMAP &var, bool isXorConst = false) const {
+		/* check for special case */
+		if (isXorConst) {
+			hpsat_var_t v = var.maxVar();
+			if (v != HPSAT_VAR_MIN) {
+				for (ANDMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
+					if (pa->isXorConst() == false)
+						continue;
+					BITMAP *ba = pa->first();
+					if (ba != 0 && ba->contains(v))
+						return (true);
+				}
+			}
+			return (false);
+		}
+
+		/* fallback logic */
 		for (ANDMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
 			if (*pa == var)
 				return (true);
