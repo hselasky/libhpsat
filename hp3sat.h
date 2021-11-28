@@ -838,7 +838,7 @@ extern void hpsat_solve_strip(XORMAP_HEAD_t *, XORMAP_HEAD_t *, hpsat_var_t, hps
 extern bool hpsat_solve_first(XORMAP_HEAD_t *, uint8_t *);
 extern size_t hpsat_solve_count(XORMAP_HEAD_t *, uint8_t *);
 extern bool hpsat_solve_callback(XORMAP *, uint8_t *, hpsat_solve_callback_t *, void *);
-extern void hpsat_solve_to_equation(XORMAP_HEAD_t *, XORMAP_HEAD_t *);
+extern void hpsat_underiv(XORMAP_HEAD_t *, XORMAP_HEAD_t *);
 
 /* simplify functions */
 

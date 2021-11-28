@@ -68,7 +68,7 @@ generate_function(XORMAP_HEAD_t &eq)
 	hpsat_demux(&temp, &vm);
 	hpsat_solve(&temp, &solution, vm);
 	hpsat_solve_strip(&temp, &solution, 4 * MAXVAR, vm);
-	hpsat_solve_to_equation(&solution, &eq);
+	hpsat_underiv(&eq, &solution);
 	TAILQ_CONCAT(&eq, &temp, entry);
 	hpsat_sort_or(&eq);
 }
@@ -108,7 +108,7 @@ square_equation(XORMAP_HEAD_t *peq)
 	hpsat_demux(&temp, &mv);
 	hpsat_solve(&temp, &solution, mv);
 	hpsat_solve_strip(&temp, &solution, 4 * MAXVAR, mv);
-	hpsat_solve_to_equation(&solution, peq);
+	hpsat_underiv(peq, &solution);
 	TAILQ_CONCAT(peq, &temp, entry);
 	hpsat_sort_or(peq);
 }

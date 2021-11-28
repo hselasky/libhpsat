@@ -25,31 +25,11 @@
 
 #include "hp3sat.h"
 
-static void
-hpsat_underiv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
-{
-	XORMAP *xa;
-	XORMAP *xn;
-
-	for (xa = TAILQ_FIRST(pderiv); xa != 0; ) {
-		xn = xa->next();
-		delete xa->remove(pderiv);
-		xa = xn;
-
-		while (!xa->isZero()) {
-			xn = xa->next();
-			xa->remove(pderiv)->insert_head(xhead);
-			xa = xn;
-		}
-		xn = xa->next();
-		delete xa->remove(pderiv);
-		xa = xn;
-	}
-}
-
 bool
 hpsat_solve(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t vm)
 {
+	XORMAP_HEAD_t temp;
+
 	XORMAP *xa;
 	XORMAP *xb;
 	XORMAP *xn;
@@ -313,21 +293,23 @@ hpsat_solve_strip(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t vmin,
 }
 
 void
-hpsat_solve_to_equation(XORMAP_HEAD_t *pderiv, XORMAP_HEAD_t *psol)
+hpsat_underiv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 {
 	XORMAP *xa;
 	XORMAP *xn;
 
-	for (xa = TAILQ_FIRST(pderiv); xa; xa = xn) {
+	for (xa = TAILQ_FIRST(pderiv); xa != 0; ) {
 		xn = xa->next();
 		delete xa->remove(pderiv);
 		xa = xn;
-		xn = xa->next();
+
 		while (!xa->isZero()) {
-			xa->remove(pderiv)->insert_tail(psol);
-			xa = xn;
 			xn = xa->next();
+			xa->remove(pderiv)->insert_head(xhead);
+			xa = xn;
 		}
+		xn = xa->next();
 		delete xa->remove(pderiv);
+		xa = xn;
 	}
 }
