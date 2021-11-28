@@ -711,6 +711,32 @@ BITMAP :: findAndVar(size_t index) const
 	return (HPSAT_VAR_MIN);
 }
 
+XORMAP
+BITMAP :: toXorMap() const
+{
+	if (isXorConst()) {
+		return (XORMAP(*this));
+	} else {
+		const size_t max = 1UL << nvar;
+		BITMAP work(*this);
+		XORMAP temp(false);
+
+		work.xform();
+
+		for (size_t x = 0; x != max; x++) {
+			if (work.peek(x) == 0)
+				continue;
+			ANDMAP *pa = new ANDMAP(true);
+			for (size_t y = 0; y != nvar; y++) {
+				if ((x >> y) & 1)
+					(new BITMAP(pvar[y], false))->insert_tail(&pa->head);
+			}
+			pa->sort().insert_tail(&temp.head);
+		}
+		return (temp);
+	}
+}
+
 static int
 hpsat_compare(const void *a, const void *b)
 {

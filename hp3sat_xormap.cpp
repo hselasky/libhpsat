@@ -183,27 +183,10 @@ XORMAP :: xorify()
 }
 
 void
-hpsat_bitmap_to_xormap(const BITMAP_HEAD_t *bhead, XORMAP_HEAD_t *ahead)
+hpsat_bitmap_to_xormap(const BITMAP_HEAD_t *bhead, XORMAP_HEAD_t *xhead)
 {
-	for (BITMAP *pa = TAILQ_FIRST(bhead); pa; pa = pa->next()) {
-		if (pa->isXorConst()) {
-			(new XORMAP(*pa))->insert_tail(ahead);
-		} else {
-			const size_t max = 1UL << pa->nvar;
-
-			for (size_t x = 0; x != max; x++) {
-				if (pa->peek(x) == 0)
-					continue;
-				XORMAP *xa = new XORMAP(false);
-				ANDMAP *pb = new ANDMAP(true);
-				for (size_t y = 0; y != pa->nvar; y++) {
-					(new BITMAP(pa->pvar[y], ~(x >> y) & 1))->insert_tail(&pb->head);
-				}
-				pb->sort().insert_tail(&xa->head);
-				xa->insert_tail(ahead);
-			}
-		}
-	}
+	for (BITMAP *pa = TAILQ_FIRST(bhead); pa; pa = pa->next())
+		(new XORMAP(pa->toXorMap()))->insert_tail(xhead);
 }
 
 size_t

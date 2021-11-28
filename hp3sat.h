@@ -55,6 +55,14 @@ class BITMAP;
 typedef TAILQ_CLASS_HEAD(BITMAP_HEAD, BITMAP) BITMAP_HEAD_t;
 typedef TAILQ_CLASS_ENTRY(BITMAP) BITMAP_ENTRY_t;
 
+class ANDMAP;
+typedef TAILQ_CLASS_HEAD(ANDMAP_HEAD, ANDMAP) ANDMAP_HEAD_t;
+typedef TAILQ_CLASS_ENTRY(ANDMAP) ANDMAP_ENTRY_t;
+
+class XORMAP;
+typedef TAILQ_CLASS_HEAD(XORMAP_HEAD, XORMAP) XORMAP_HEAD_t;
+typedef TAILQ_CLASS_ENTRY(XORMAP) XORMAP_ENTRY_t;
+
 class BITMAP {
 public:
 	BITMAP() {
@@ -256,6 +264,8 @@ public:
 
 	void print() const;
 
+	XORMAP toXorMap() const;
+
 	int compare(const BITMAP & other, bool = true) const;
 
 	bool operator >(const BITMAP & other) const {
@@ -312,10 +322,6 @@ extern void hpsat_check_inversion(BITMAP_HEAD_t *);
 
 extern int hpsat_loadcnf(std::istream &, BITMAP_HEAD_t *, hpsat_var_t * = 0, hpsat_var_t * = 0);
 extern void hpsat_printcnf(std::ostream &, BITMAP_HEAD_t *, hpsat_var_t = 0, hpsat_var_t = 0);
-
-class ANDMAP;
-typedef TAILQ_CLASS_HEAD(ANDMAP_HEAD, ANDMAP) ANDMAP_HEAD_t;
-typedef TAILQ_CLASS_ENTRY(ANDMAP) ANDMAP_ENTRY_t;
 
 class ANDMAP {
 public:
@@ -562,10 +568,6 @@ extern bool hpsat_sort_or(ANDMAP_HEAD_t *);
 extern bool hpsat_sort_xor(ANDMAP_HEAD_t *);
 extern void hpsat_bitmap_to_andmap(const BITMAP_HEAD_t *, ANDMAP_HEAD_t *);
 extern void hpsat_free(ANDMAP_HEAD_t *);
-
-class XORMAP;
-typedef TAILQ_CLASS_HEAD(XORMAP_HEAD, XORMAP) XORMAP_HEAD_t;
-typedef TAILQ_CLASS_ENTRY(XORMAP) XORMAP_ENTRY_t;
 
 class XORMAP {
 public:
