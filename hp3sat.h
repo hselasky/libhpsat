@@ -883,6 +883,10 @@ extern bool hpsat_simplify_variable_map(XORMAP_HEAD_t *, BITMAP_HEAD_t *);
 extern size_t hpsat_find_longest_path(XORMAP_HEAD_t *, hpsat_var_t, hpsat_var_t, hpsat_var_t *);
 extern size_t hpsat_find_shortest_path(XORMAP_HEAD_t *, hpsat_var_t, hpsat_var_t, hpsat_var_t *);
 
+/* compress functions */
+
+extern void hpsat_compress(XORMAP_HEAD_t *, ANDMAP_HEAD_t *);
+
 /* logic builder classes and functions */
 
 class variable_t {
