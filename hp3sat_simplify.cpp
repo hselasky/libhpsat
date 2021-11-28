@@ -595,26 +595,33 @@ err_one:
 	xa->insert_tail(xhead);
 }
 
-static void
+static bool
 hpsat_substitute(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t v, const BITMAP &expr)
 {
 	XORMAP *xa;
 	XORMAP *xn;
+	bool any;
 
 	if (expr.isZero()) {
-		return;
+		return (false);
 	} else if (expr.isOne()) {
 		hpsat_free(xhead);
 		(new XORMAP(expr))->insert_head(xhead);
-		return;
+		return (false);
 	}
 
 	printf("c SUBSTITUTED "); expr.print(); printf(" # v%zd\n", v);
 
 	assert(expr.contains(v));
 
+	any = false;
+
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
+
+		if (xa->contains(v) == false)
+			continue;
+		any = true;
 
 		if (xa->substitute(v, expr).isZero())
 			delete xa->remove(xhead);
@@ -625,11 +632,12 @@ hpsat_substitute(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t v, con
 	(new XORMAP(false))->insert_head(pderiv);
 	(new XORMAP(expr))->insert_head(pderiv);
 	(new XORMAP(v,false))->insert_head(pderiv);
-	return;
+	return (any);
 err_one:
 	xa->remove(xhead);
 	hpsat_free(xhead);
 	xa->insert_tail(xhead);
+	return (any);
 }
 
 bool
@@ -1028,6 +1036,8 @@ hpsat_simplify_split(BITMAP &a, BITMAP &b, BITMAP &c)
 bool
 hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 {
+	XORMAP_HEAD_t temp;
+
 	XORMAP *xa;
 	XORMAP *xb;
 	XORMAP *xn;
@@ -1039,26 +1049,48 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 	ANDMAP *pb;
 
 	bool any;
-	bool repeat;
 
-	repeat = false;
-top:
+	hpsat_sort_or(xhead);
+
+	TAILQ_INIT(&temp);
+
 	any = false;
+top:
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
 
 		if (xa->isZero()) {
 			delete xa->remove(xhead);
-		} else if (!xa->isXorConst()) {
+		} else {
 			pa = xa->last();
 			pb = xa->first();
 
+			if (pb == 0)
+				continue;
+
 			if (pb->isOne() && pb->next() == pa) {
-				printf("c BONUS\n");
 				xa->remove(xhead);
 				for (bm = pa->first(); bm; bm = bm->next()) {
 					bm->toggleInverted();
-					hpsat_substitute(xhead, pderiv, bm->maxVar(), *bm);
+					any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
+				}
+				if (pderiv) {
+					TAILQ_CONCAT(&temp, pderiv, entry);
+					TAILQ_CONCAT(pderiv, &temp, entry);
+				}
+				delete xa;
+				goto top;
+			} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
+				XORMAP_HEAD_t temp;
+				TAILQ_INIT(&temp);
+
+				xa->remove(xhead);
+				bm = xa->first()->first();
+				any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
+
+				if (pderiv) {
+					TAILQ_CONCAT(&temp, pderiv, entry);
+					TAILQ_CONCAT(pderiv, &temp, entry);
 				}
 				delete xa;
 				goto top;
@@ -1067,10 +1099,10 @@ top:
 			for (xb = TAILQ_FIRST(xhead); xb; xb = xm) {
 				xm = xb->next();
 
-				if (xb == xa || xb->contains(*pa) == false)
+				if (xb == xa ||
+				    xb->contains(*pa, pa->isXorConst()) == false)
 					continue;
 				*xb ^= *xa;
-				repeat = true;
 
 				if (xb->isZero()) {
 					if (xn == xb)
@@ -1082,88 +1114,10 @@ top:
 		}
 	}
 
-	if (any)
-		goto top;
+	if (pderiv == 0)
+		hpsat_underiv(xhead, &temp);
 
-	hpsat_var_t v = HPSAT_VAR_MAX;
-	while (1) {
-		v = hpsat_maxvar(xhead, v);
-		if (v == HPSAT_VAR_MIN)
-			break;
-
-		xb = 0;
-
-		for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
-			if (xa->contains(v) == false)
-				continue;
-			if (xa->isXorConst(v)) {
-				xb = xa;
-				break;
-			}
-		}
-
-		if (xb) {
-			bool found = true;
-
-			xb->remove(xhead);
-
-			for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-				xn = xa->next();
-				if (xa->contains(v) == false)
-					continue;
-				if (!xa->isXorConst(v)) {
-					XORMAP test(*xa);
-					test.substitute(v, *xb);
-
-					if (hpsat_simplify_defactor(&test.head))
-						test.sort();
-
-					if (test.isZero()) {
-						/* This equation is redundant. */
-						delete xa->remove(xhead);
-						continue;
-					}
-
-					if (!test.isXorConst())
-						found = false;
-					else
-						*xa = test;
-				} else {
-					*xa ^= *xb;
-				}
-			}
-
-			if (!found) {
-				xb->insert_tail(xhead);
-				continue;
-			}
-
-			for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-				xn = xa->next();
-
-				if (xa->contains(v) == false)
-					continue;
-
-				if (!xa->isXorConst(v)) {
-					XORMAP test(*xa);
-					test.substitute(v, *xb);
-
-					if (hpsat_simplify_defactor(&test.head))
-						test.sort();
-					if (!test.isZero()) {
-						printf("c NOT ZERO "); test.print(); printf("\n");
-						test.dup()->insert_head(xhead);
-					}
-
-					delete xa->remove(xhead);
-				}
-			}
-			(new XORMAP(false))->insert_head(pderiv);
-			xb->insert_head(pderiv);
-			(new XORMAP(v,false))->insert_head(pderiv);
-		}
-	}
-	return (repeat);
+	return (any);
 }
 
 bool
