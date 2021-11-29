@@ -503,14 +503,16 @@ public:
 	BITMAP *last(void) const {
 		return (TAILQ_LAST(&head, BITMAP_HEAD));
 	};
-	int compare(const ANDMAP & other, bool compare_data = true) const {
-		const size_t na = count();
-		const size_t nb = other.count();
+	int compare(const ANDMAP & other, bool compare_data = true, bool compare_count = true) const {
+		if (compare_count) {
+			const size_t na = count();
+			const size_t nb = other.count();
 
-		if (na > nb)
-			return (1);
-		else if (na < nb)
-			return (-1);
+			if (na > nb)
+				return (1);
+			else if (na < nb)
+				return (-1);
+		}
 
 		const BITMAP *pa = TAILQ_FIRST(&head);
 		const BITMAP *pb = TAILQ_FIRST(&other.head);
