@@ -567,7 +567,8 @@ extern hpsat_var_t hpsat_minvar(const ANDMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_M
 extern size_t hpsat_numvar(const ANDMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX, BITMAP * = 0);
 extern void hpsat_merge(ANDMAP_HEAD_t *);
 extern bool hpsat_sort_or(ANDMAP_HEAD_t *);
-extern bool hpsat_sort_xor(ANDMAP_HEAD_t *);
+extern bool hpsat_sort_xor_accumulate(ANDMAP_HEAD_t *);
+extern bool hpsat_sort_xor_value(ANDMAP_HEAD_t *);
 extern void hpsat_bitmap_to_andmap(const BITMAP_HEAD_t *, ANDMAP_HEAD_t *);
 extern void hpsat_free(ANDMAP_HEAD_t *);
 
@@ -721,7 +722,7 @@ public:
 	};
 	bool isXorAble(hpsat_var_t) const;
 	const XORMAP & xored(const XORMAP &, hpsat_var_t, XORMAP_HEAD_t *) const;
-	XORMAP & sort();
+	XORMAP & sort(bool byValue = false);
 
 	BITMAP toBitmap() const {
 		BITMAP temp(false);

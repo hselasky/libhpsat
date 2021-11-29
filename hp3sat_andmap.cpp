@@ -85,9 +85,15 @@ hpsat_free(ANDMAP_HEAD_t *phead)
 }
 
 static int
-hpsat_compare(const void *a, const void *b)
+hpsat_compare_default(const void *a, const void *b)
 {
 	return ((ANDMAP * const *)a)[0][0].compare(((ANDMAP * const *)b)[0][0]);
+}
+
+static int
+hpsat_compare_value(const void *a, const void *b)
+{
+	return ((ANDMAP * const *)a)[0][0].compare(((ANDMAP * const *)b)[0][0], true, false);
 }
 
 void
@@ -145,19 +151,19 @@ hpsat_sort_or(ANDMAP_HEAD_t *phead)
 	}
 
 	for (size_t x = 1; x != count; x++) {
-		if (pp[x - 1]->compare(*pp[x]) > 0) {
+		if (hpsat_compare_default(pp + x - 1, pp + x) > 0) {
 			did_sort = true;
 			break;
 		}
 	}
 	if (did_sort)
-		mergesort(pp, count, sizeof(pp[0]), &hpsat_compare);
+		mergesort(pp, count, sizeof(pp[0]), &hpsat_compare_default);
 
 	TAILQ_INIT(phead);
 
 	for (size_t x = 1; x != count; x++) {
 		if (pp[x - 1]->isZero() ||
-		    pp[x - 1]->compare(*pp[x]) == 0) {
+		    hpsat_compare_default(pp + x - 1, pp + x) == 0) {
 			delete pp[x - 1];
 		} else {
 			pp[x - 1]->insert_tail(phead);
@@ -175,7 +181,7 @@ done:
 }
 
 bool
-hpsat_sort_xor(ANDMAP_HEAD_t *phead)
+hpsat_sort_xor_accumulate(ANDMAP_HEAD_t *phead)
 {
 	ANDMAP *pa;
 	ANDMAP **pp;
@@ -199,13 +205,13 @@ hpsat_sort_xor(ANDMAP_HEAD_t *phead)
 	}
 
 	for (x = 1; x != count; x++) {
-		if (pp[x - 1]->compare(*pp[x]) > 0) {
+		if (hpsat_compare_default(pp + x - 1, pp + x) > 0) {
 			did_sort = true;
 			break;
 		}
 	}
 	if (did_sort)
-		mergesort(pp, count, sizeof(pp[0]), &hpsat_compare);
+		mergesort(pp, count, sizeof(pp[0]), &hpsat_compare_default);
 
 	TAILQ_INIT(phead);
 
@@ -221,7 +227,87 @@ hpsat_sort_xor(ANDMAP_HEAD_t *phead)
 
 	while (x != count) {
 		for (y = x + 1; y != count; y++) {
-			if (pp[x]->compare(*pp[y]))
+			if (hpsat_compare_default(pp + x, pp + y) != 0)
+				break;
+		}
+		/* XOR magic */
+		if (pp[x]->isZero())
+			delete pp[x];
+		else if ((x ^ y) & 1)
+			pp[x]->insert_tail(phead);
+		else
+			delete pp[x];
+
+		while (++x != y)
+			delete pp[x];
+	}
+
+	delete [] pp;
+
+	return (did_sort);
+}
+
+bool
+hpsat_sort_xor_value(ANDMAP_HEAD_t *phead)
+{
+	ANDMAP *pa;
+	ANDMAP **pp;
+	BITMAP *ba;
+	size_t count = 0;
+	size_t x;
+	size_t y;
+	bool did_sort = false;
+
+	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
+		pa->sort();
+		if (pa->isXorConst() && (ba = pa->first()) != 0) {
+			if (ba->isInverted()) {
+				count += ba->nvar + 1;
+			} else if (ba->nvar < 1) {
+				count ++;
+			} else {
+				count += ba->nvar;
+			}
+
+		} else {
+			count++;
+		}
+	}
+
+	if (count == 0)
+		return (false);
+
+	pp = new ANDMAP * [count];
+
+	count = 0;
+	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
+		if (pa->isXorConst() && (ba = pa->first()) != 0) {
+			/* split accumulated XORs */
+			if (ba->isInverted()) {
+				while (ba->nvar != 0)
+					pp[count++] = new ANDMAP(ba->pvar[--(ba->nvar)], false);
+			} else {
+				while (ba->nvar > 1)
+					pp[count++] = new ANDMAP(ba->pvar[--(ba->nvar)], false);
+			}
+		}
+		pp[count++] = pa;
+	}
+
+	for (x = 1; x != count; x++) {
+		if (hpsat_compare_value(pp + x - 1, pp + x) > 0) {
+			did_sort = true;
+			break;
+		}
+	}
+	if (did_sort)
+		mergesort(pp, count, sizeof(pp[0]), &hpsat_compare_value);
+
+	TAILQ_INIT(phead);
+
+	for (x = 0; x != count; ) {
+		for (y = x + 1; y != count; y++) {
+			if (hpsat_compare_value(pp + x, pp + y) != 0)
 				break;
 		}
 		/* XOR magic */

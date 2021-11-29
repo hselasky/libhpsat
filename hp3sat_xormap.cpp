@@ -63,9 +63,12 @@ hpsat_free(XORMAP_HEAD_t *phead)
 }
 
 XORMAP &
-XORMAP :: sort(void)
+XORMAP :: sort(bool byValue)
 {
-	hpsat_sort_xor(&head);
+	if (byValue)
+		hpsat_sort_xor_value(&head);
+	else
+		hpsat_sort_xor_accumulate(&head);
 	return (*this);
 }
 
