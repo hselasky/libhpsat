@@ -104,8 +104,10 @@ repeat:
 	printf("ZERO CARRY: %zd\n", zc);
 	printf("ZERO REMAINDER: %zd\n", zr);
 
-	for (size_t x = 0; x != 2 * MAXVAR; x++)
+	for (size_t x = 0; x != 2 * MAXVAR; x++) {
 		hpsat_find_ored(&eq[x]);
+		hpsat_find_anded(&eq[x]);
+	}
 
 	for (size_t x = 0; x != 2 * MAXVAR; x++) {
 		printf("VAR[%zd] = \n", x);

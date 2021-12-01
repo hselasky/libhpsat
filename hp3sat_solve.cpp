@@ -105,6 +105,9 @@ solve:
 		while (hpsat_simplify_xormap(&ahead, 0))
 			;
 
+		hpsat_find_ored(&ahead);
+		hpsat_find_anded(&ahead);
+
 		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xa->next()) {
 			if (xa->isZero())
 				continue;
@@ -116,6 +119,9 @@ solve:
 		}
 
 		hpsat_sort_or(&thead);
+
+		hpsat_find_ored(&thead);
+		hpsat_find_anded(&thead);
 
 		TAILQ_CONCAT(xhead, &thead, entry);
 
