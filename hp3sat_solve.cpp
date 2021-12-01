@@ -108,14 +108,16 @@ solve:
 		hpsat_find_ored(&ahead);
 		hpsat_find_anded(&ahead);
 
-		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xa->next()) {
-			if (xa->isZero())
-				continue;
+		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xn) {
+			xn = xa->next();
+
 			for (xb = xa->next(); xb != 0; xb = xb->next()) {
 				if (xb->isZero())
 					continue;
 				xa->xored(*xb, v, &thead);
 			}
+			if (xa->isZero())
+				delete xa->remove(&ahead);
 		}
 
 		hpsat_sort_or(&thead);
