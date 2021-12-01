@@ -848,6 +848,7 @@ extern bool hpsat_sort_or(XORMAP_HEAD_t *);
 extern void hpsat_free(XORMAP_HEAD_t *);
 extern void hpsat_merge(XORMAP_HEAD_t *);
 extern void hpsat_find_ored(XORMAP_HEAD_t *);
+extern void hpsat_find_anded(XORMAP_HEAD_t *);
 
 /* solve functions */
 
