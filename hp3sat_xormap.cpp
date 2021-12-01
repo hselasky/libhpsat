@@ -333,3 +333,56 @@ repeat:
 	if (found)
 		goto repeat;
 }
+
+void
+hpsat_find_ored(XORMAP_HEAD_t *phead)
+{
+	XORMAP_HEAD_t head;
+
+	XORMAP *xa;
+	XORMAP *xb;
+	XORMAP *xc;
+	XORMAP *xn;
+	XORMAP *xm;
+	ANDMAP *pa;
+
+	TAILQ_INIT(&head);
+
+	for (xa = TAILQ_FIRST(phead); xa; xa = xn) {
+		xn = xa->next();
+
+		if (xa->isXorConst())
+			continue;
+		if (xa->first()->next() == 0)
+			continue;
+
+		for (pa = xa->first(); pa; pa = pa->next()) {
+			xb = new XORMAP(*pa);
+
+			if (((*xa ^ *xb) & *xb).defactor().isZero())
+				xb->insert_tail(&head);
+			else
+				delete xb;
+		}
+
+		for (xb = TAILQ_FIRST(&head); xb; xb = xb->next())
+			*xa ^= *xb;
+
+		if (xa->isZero())
+			delete xa->remove(phead);
+
+		for (xb = TAILQ_FIRST(&head); xb; xb = xb->next()) {
+			xb->defactor();
+
+			for (xc = TAILQ_FIRST(&head); xc; xc = xm) {
+				xm = xc->next();
+				if (xb == xc)
+					continue;
+				if ((*xc & *xb).defactor() == *xc)
+					delete xc->remove(&head);
+			}
+		}
+
+		TAILQ_CONCAT(phead, &head, entry);
+	}
+}

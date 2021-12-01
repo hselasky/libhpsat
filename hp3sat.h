@@ -847,6 +847,7 @@ extern void hpsat_bitmap_to_xormap(const BITMAP_HEAD_t *, XORMAP_HEAD_t *);
 extern bool hpsat_sort_or(XORMAP_HEAD_t *);
 extern void hpsat_free(XORMAP_HEAD_t *);
 extern void hpsat_merge(XORMAP_HEAD_t *);
+extern void hpsat_find_ored(XORMAP_HEAD_t *);
 
 /* solve functions */
 
