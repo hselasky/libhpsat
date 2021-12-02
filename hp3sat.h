@@ -717,7 +717,7 @@ public:
 		}
 		return (false);
 	};
-	XORMAP & defactor();
+	XORMAP & defactor(bool byValue = false);
 	XORMAP implication();
 	XORMAP & substitute(hpsat_var_t var, const BITMAP &expr);
 	XORMAP & substitute(hpsat_var_t var, const XORMAP &expr);

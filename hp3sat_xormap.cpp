@@ -241,10 +241,10 @@ XORMAP :: isXorAble(hpsat_var_t var) const
 }
 
 XORMAP &
-XORMAP :: defactor()
+XORMAP :: defactor(bool byValue)
 {
 	hpsat_simplify_defactor(&head);
-	return (sort());
+	return (sort(byValue));
 }
 
 const XORMAP &
