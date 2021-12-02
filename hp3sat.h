@@ -885,6 +885,7 @@ extern void hpsat_simplify_factor(XORMAP_HEAD_t *);
 extern bool hpsat_simplify_find_zeros(XORMAP_HEAD_t *);
 extern bool hpsat_simplify_join(XORMAP_HEAD_t *);
 extern void hpsat_simplify_split(BITMAP &, BITMAP &, BITMAP &);
+extern void hpsat_simplify_split(ANDMAP &, ANDMAP &, ANDMAP &);
 extern bool hpsat_simplify_assignments(XORMAP_HEAD_t *, BITMAP_HEAD_t *, const BITMAP &, bool);
 extern bool hpsat_simplify_symmetry(XORMAP_HEAD_t *, XORMAP_HEAD_t *, bool);
 extern bool hpsat_simplify_variable_map(XORMAP_HEAD_t *, BITMAP_HEAD_t *);

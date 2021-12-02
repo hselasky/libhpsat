@@ -1033,6 +1033,37 @@ hpsat_simplify_split(BITMAP &a, BITMAP &b, BITMAP &c)
 	}
 }
 
+/* Split a ANDMAP by common and not common variables */
+void
+hpsat_simplify_split(ANDMAP &a, ANDMAP &b, ANDMAP &c)
+{
+	BITMAP *pa = a.first();
+	BITMAP *pb = b.first();
+	BITMAP *pc;
+	BITMAP *pd;
+
+	while (pa && pb) {
+		pc = pa->next();
+		pd = pb->next();
+
+		switch (pa->compare(*pb)) {
+		case 0:
+			delete pa->remove(&a.head);
+			pb->remove(&b.head)->insert_tail(&c.head);
+
+			pa = pc;
+			pb = pd;
+			break;
+		case 1:
+			pb = pd;
+			break;
+		default:
+			pa = pc;
+			break;
+		}
+	}
+}
+
 bool
 hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 {
