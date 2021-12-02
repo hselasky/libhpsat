@@ -1112,9 +1112,6 @@ top:
 				delete xa;
 				goto top;
 			} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
-				XORMAP_HEAD_t temp;
-				TAILQ_INIT(&temp);
-
 				xa->remove(xhead);
 				bm = xa->first()->first();
 				any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
