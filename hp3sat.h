@@ -388,6 +388,13 @@ public:
 		else
 			return (false);
 	};
+	bool isInverted() const {
+		if (isOne())
+			return (true);
+		if (isXorConst())
+			return (first()->isInverted());
+		return (false);
+	};
 	bool contains(hpsat_var_t var) const {
 		for (BITMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
 			if (pa->contains(var))
