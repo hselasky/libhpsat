@@ -380,6 +380,9 @@ hpsat_find_anded(XORMAP_HEAD_t *phead)
 	XORMAP *xb;
 	XORMAP *xn;
 
+	ANDMAP *pa;
+	ANDMAP *pn;
+
 	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next()) {
 		xa->defactor();
 
@@ -387,8 +390,18 @@ hpsat_find_anded(XORMAP_HEAD_t *phead)
 			xn = xb->next();
 			if (xa == xb)
 				continue;
-			if ((*xb & *xa).defactor() == *xb)
+			if ((*xb & *xa).defactor() == *xb) {
 				delete xb->remove(phead);
+			} else {
+				for (pa = xb->first(); pa; pa = pn) {
+					pn = pa->next();
+
+					XORMAP test(*pa);
+
+					if ((test & *xa).defactor() == test)
+						delete pa->remove(&xb->head);
+				}
+			}
 		}
 	}
 }
