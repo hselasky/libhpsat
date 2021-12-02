@@ -801,20 +801,22 @@ public:
 	ANDMAP *last(void) const {
 		return (TAILQ_LAST(&head, ANDMAP_HEAD));
 	};
-	int compare(const XORMAP & other) const {
-		const size_t na = count();
-		const size_t nb = other.count();
+	int compare(const XORMAP & other, bool compare_data = true, bool compare_count = true) const {
+		if (compare_count) {
+			const size_t na = count();
+			const size_t nb = other.count();
 
-		if (na > nb)
-			return (1);
-		else if (na < nb)
-			return (-1);
+			if (na > nb)
+				return (1);
+			else if (na < nb)
+				return (-1);
+		}
 
 		const ANDMAP *pa = TAILQ_FIRST(&head);
 		const ANDMAP *pb = TAILQ_FIRST(&other.head);
 
 		while (pa && pb) {
-			const int ret = pa->compare(*pb);
+			const int ret = pa->compare(*pb, compare_data, compare_count);
 			if (ret)
 				return (ret);
 			pa = pa->next();
