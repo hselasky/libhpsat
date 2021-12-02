@@ -423,3 +423,56 @@ XORMAP :: findMaxUsedVariable() const
 	}
 	return (mv);
 }
+
+XORMAP
+XORMAP :: implication()
+{
+	ANDMAP_HEAD_t rem;
+
+	hpsat_var_t v;
+
+	ANDMAP *pa;
+	ANDMAP *pn;
+
+	XORMAP impl;
+	XORMAP anded;
+
+	defactor();
+
+	for (v = HPSAT_VAR_MAX; (v = maxVar(v)) != HPSAT_VAR_MIN; ) {
+		XORMAP test[2] = { *this, *this };
+		if ((test[0].expand(v, 0) ^ test[1].expand(v, 1)).defactor().isOne())
+			(new ANDMAP(v, false))->insert_tail(&impl.head);
+	}
+
+	for (pa = first(); pa; pa = pa->next()) {
+		if (pa->isInverted())
+			(new ANDMAP(true))->insert_tail(&impl.head);
+	}
+
+	if (impl.sort().isZero() || impl == *this)
+		return (XORMAP(false));
+
+	*this ^= impl;
+
+	sort(true);
+
+	TAILQ_INIT(&rem);
+
+	anded = impl;
+
+	while ((v = findMaxUsedVariable()) != HPSAT_VAR_MIN) {
+		for (pa = first(); pa; pa = pn) {
+			pn = pa->next();
+			if (pa->contains(v))
+				pa->remove(&head)->insert_tail(&rem);
+		}
+		anded &= XORMAP(v, true);
+	}
+
+	TAILQ_CONCAT(&head, &rem, entry);
+
+	*this ^= impl;
+
+	return (anded.sort());
+}
