@@ -405,3 +405,21 @@ hpsat_find_anded(XORMAP_HEAD_t *phead)
 		}
 	}
 }
+
+hpsat_var_t
+XORMAP :: findMaxUsedVariable() const
+{
+	hpsat_var_t mv = HPSAT_VAR_MIN;
+	size_t max = 0;
+
+	for (hpsat_var_t v = HPSAT_VAR_MAX; (v = maxVar(v)) != HPSAT_VAR_MIN; ) {
+		size_t count = 0;
+		for (ANDMAP *pa = first(); pa; pa = pa->next())
+			count += pa->contains(v);
+		if (count > max) {
+			max = count;
+			mv = v;
+		}
+	}
+	return (mv);
+}

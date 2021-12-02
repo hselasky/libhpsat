@@ -621,6 +621,7 @@ public:
 		return (hpsat_minvar(&head, limit));
 	};
 	hpsat_var_t findAndVar() const;
+	hpsat_var_t findMaxUsedVariable() const;
 
 	XORMAP & shiftVar(hpsat_var_t shift) {
 		for (ANDMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
