@@ -787,7 +787,7 @@ hpsat_simplify_deriv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 					BITMAP zero;
 					BITMAP one;
 
-					zero = one = xb->toBitmap();
+					zero = one = xb->toBitMap();
 
 					zero.expand(v, 0).sort();
 					one.expand(v, 1).sort();
@@ -852,7 +852,7 @@ hpsat_simplify_mixed(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv,
 		BITMAP zero;
 		BITMAP one;
 
-		zero = one = xa->remove(xhead)->toBitmap();
+		zero = one = xa->remove(xhead)->toBitMap();
 
 		delete xa;
 

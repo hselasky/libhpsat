@@ -558,7 +558,7 @@ public:
 			retval++;
 		return (retval);
 	};
-	BITMAP toBitmap() const {
+	BITMAP toBitMap() const {
 		BITMAP temp(true);
 		for (BITMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
 			temp &= *pa;
@@ -733,10 +733,10 @@ public:
 	const XORMAP & xored(const XORMAP &, hpsat_var_t, XORMAP_HEAD_t *) const;
 	XORMAP & sort(bool byValue = false);
 
-	BITMAP toBitmap() const {
+	BITMAP toBitMap() const {
 		BITMAP temp(false);
 		for (ANDMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
-			temp ^= pa->toBitmap();
+			temp ^= pa->toBitMap();
 			temp.sort();
 		}
 		return (temp);

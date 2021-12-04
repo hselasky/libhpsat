@@ -64,7 +64,7 @@ solve:
 		if (xa->isXorConst()) {
 			xa->remove(xhead)->insert_tail(&temp);
 		} else {
-			(new XORMAP(xa->toBitmap().toXorMap()))->insert_tail(&temp);
+			(new XORMAP(xa->toBitMap().toXorMap()))->insert_tail(&temp);
 			delete xa->remove(xhead);
 		}
 	}
