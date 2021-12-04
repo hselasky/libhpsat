@@ -665,6 +665,8 @@ hpsat_simplify_deriv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 	/* only zero entries used */
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
 		for (ANDMAP *pa = TAILQ_FIRST(&xa->head); pa; pa = pa->next()) {
+			if (pa->isXorConst() == false)
+				continue;
 			for (BITMAP *bm = pa->first(); bm; bm = bm->next()) {
 				for (size_t x = 0; x != bm->nvar; x++)
 					plast[bm->pvar[x]] = 0;
@@ -675,12 +677,9 @@ hpsat_simplify_deriv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
 
-		if (xa->isXorConst() == false)
-			continue;
-
 		v = HPSAT_VAR_MAX;
 		while (1) {
-			v = xa->maxVar(v);
+			v = xa->maxVar(v, true);
 			if (v == HPSAT_VAR_MIN)
 				break;
 			if (plast[v] != 0) {
@@ -705,7 +704,7 @@ hpsat_simplify_deriv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 		xa = plast[v];
 
 		while (1) {
-			v = xa->maxVar(v);
+			v = xa->maxVar(v, true);
 			if (v == HPSAT_VAR_MIN)
 				break;
 			if (plast[v] != 0)
