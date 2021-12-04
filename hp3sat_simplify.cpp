@@ -1544,23 +1544,28 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 	XORMAP *xn;
 
 	ANDMAP *pa;
+	ANDMAP *pb;
 	ANDMAP *pn;
+
+	ANDMAP sel;
 
 	bool any = false;
 
 	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next())
-		xa->defactor().sort(true);
+		xa->defactor();
 
 	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next()) {
-		ANDMAP sel;
-
-		for (pa = xa->first(); pa; pa = pa->next()) {
-			if (sel < *pa)
-				sel = *pa;
-		}
-
-		if (sel.isZero() || sel.isOne())
+		pb = xa->last();
+		if (pb == 0)
 			continue;
+
+		if (pb->isZero() || pb->isOne())
+			continue;
+
+		if (pb->isXorConst()) {
+			sel = ANDMAP(pb->maxVar(), false);
+			pb = &sel;
+		}
 
 		for (xb = TAILQ_FIRST(phead); xb; xb = xn) {
 
@@ -1568,33 +1573,37 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 			if (xb == xa)
 				continue;
 
-			for (ANDMAP *pa = xb->first(); pa; pa = pn) {
+			XORMAP xored;
+
+			for (pa = xb->first(); pa; pa = pn) {
 				pn = pa->next();
 
-				ANDMAP t[3] = { sel, *pa, ANDMAP(true) };
-				hpsat_simplify_split(t[0], t[1], t[2]);
+				if (pb->isXorConst() && pa->isXorConst()) {
+					/* handle special case */
+					if (pa->contains(pb->maxVar()))
+						xored ^= XORMAP(pb->maxVar());
+				} else {
+					ANDMAP t[3] = { *pb, *pa, ANDMAP(true) };
+					hpsat_simplify_split(t[0], t[1], t[2]);
 
-				if (t[0].isOne() == false)
-					continue;
-				XORMAP temp(*xa & XORMAP(t[1]));
-
-				if (temp.defactor().isZero())
-					continue;
-
-				XORMAP test(*xb ^ temp);
-				test.defactor(true);
-
-				*xb = test;
-				any = true;
-				break;
+					if (t[0].isOne())
+						xored ^= XORMAP(t[1]);
+				}
 			}
+
+			if (xored.isZero())
+				continue;
+
+			xored &= *xa;
+			if (xored.defactor().isZero())
+				continue;
+
+			*xb ^= xored;
+			any = true;
+
 			if (xb->isZero())
 				delete xb->remove(phead);
 		}
 	}
-
-	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next())
-		xa->sort();
-
 	return (any);
 }
