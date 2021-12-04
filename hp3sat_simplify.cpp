@@ -1535,3 +1535,66 @@ hpsat_simplify_symmetry(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, bool insert
 	hpsat_free(&vmap);
 	return (changed);
 }
+
+bool
+hpsat_simplify_insert(XORMAP_HEAD_t *phead)
+{
+	XORMAP *xa;
+	XORMAP *xb;
+	XORMAP *xn;
+
+	ANDMAP *pa;
+	ANDMAP *pn;
+
+	bool any = false;
+
+	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next())
+		xa->defactor().sort(true);
+
+	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next()) {
+		ANDMAP sel;
+
+		for (pa = xa->first(); pa; pa = pa->next()) {
+			if (sel < *pa)
+				sel = *pa;
+		}
+
+		if (sel.isZero() || sel.isOne())
+			continue;
+
+		for (xb = TAILQ_FIRST(phead); xb; xb = xn) {
+
+			xn = xb->next();
+			if (xb == xa)
+				continue;
+
+			for (ANDMAP *pa = xb->first(); pa; pa = pn) {
+				pn = pa->next();
+
+				ANDMAP t[3] = { sel, *pa, ANDMAP(true) };
+				hpsat_simplify_split(t[0], t[1], t[2]);
+
+				if (t[0].isOne() == false)
+					continue;
+				XORMAP temp(*xa & XORMAP(t[1]));
+
+				if (temp.defactor().isZero())
+					continue;
+
+				XORMAP test(*xb ^ temp);
+				test.defactor(true);
+
+				*xb = test;
+				any = true;
+				break;
+			}
+			if (xb->isZero())
+				delete xb->remove(phead);
+		}
+	}
+
+	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next())
+		xa->sort();
+
+	return (any);
+}
