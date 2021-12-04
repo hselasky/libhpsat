@@ -1582,7 +1582,7 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 
 					/* handle special case */
 					if (pa->contains(v))
-						(new ANDMAP(v, false))->insert_tail(&xored.head);
+						(new ANDMAP(true))->insert_tail(&xored.head);
 				} else {
 					ANDMAP t[3] = { *pb, *pa, ANDMAP(true) };
 					hpsat_simplify_split(t[0], t[1], t[2]);
