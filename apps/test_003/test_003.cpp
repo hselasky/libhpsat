@@ -61,9 +61,11 @@ int main()
 	(new XORMAP(var[MAXVAR - 1]))->insert_tail(&eq[MAXVAR]);
 #endif
 
+#if 0
 	/* a + b = 0 */
 	for (size_t x = 0; x != 2 * MAXVAR; x++)
 		(new XORMAP(x + MAXVAR, false))->insert_tail(&eq[x]);
+#endif
 
 	/* build the logic expression for the adder */
 repeat:
@@ -109,7 +111,7 @@ repeat:
 	if (any)
 		goto repeat;
 
-#if 0
+#if 1
 	for (size_t x = 0; x != 2 * MAXVAR; x++) {
 		XORMAP *xa = TAILQ_FIRST(&eq[x]);
 		if (xa == 0)
