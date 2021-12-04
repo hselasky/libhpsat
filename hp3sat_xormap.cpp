@@ -374,6 +374,38 @@ hpsat_find_ored(XORMAP_HEAD_t *phead)
 }
 
 void
+hpsat_find_all_ored(XORMAP_HEAD_t *phead)
+{
+	XORMAP_HEAD_t head;
+
+	XORMAP *xa;
+	XORMAP *xb;
+	XORMAP *xn;
+	ANDMAP *pa;
+
+	TAILQ_INIT(&head);
+
+	for (xa = TAILQ_FIRST(phead); xa; xa = xn) {
+		xn = xa->next();
+
+		if (xa->isXorConst() ||
+		    xa->first()->next() == 0)
+			continue;
+
+		*xa = xa->toBitMap().toOrMap();
+
+		while (1) {
+			pa = xa->first();
+			if (pa == 0 || pa->next() == 0)
+				break;
+			(xb = new XORMAP(false))->insert_tail(&head);
+			pa->remove(&xa->head)->insert_tail(&xb->head);
+		}
+	}
+	TAILQ_CONCAT(phead, &head, entry);
+}
+
+void
 hpsat_find_anded(XORMAP_HEAD_t *phead)
 {
 	XORMAP *xa;
