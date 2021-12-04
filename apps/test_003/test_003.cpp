@@ -25,7 +25,7 @@
 
 #include "hp3sat.h"
 
-#define	MAXVAR 4
+#define	MAXVAR 5
 
 int main()
 {
@@ -51,6 +51,13 @@ int main()
 			(new XORMAP(var[x] & var[y]))->insert_tail(&eq[x + y]);
 		}
 	}
+#elif 0
+	/* build a multiplier */
+	for (size_t x = 0; x != MAXVAR / 2; x++) {
+		for (size_t y = 0; y != MAXVAR / 2; y++) {
+			(new XORMAP(var[x] & var[y + MAXVAR / 2]))->insert_tail(&eq[x + y]);
+		}
+	}
 #else
 	/* build multiply by three */
 	for (size_t x = 0; x != MAXVAR; x++) {
@@ -67,6 +74,7 @@ int main()
 		(new XORMAP(x + MAXVAR, false))->insert_tail(&eq[x]);
 #endif
 
+#if 1
 	/* build the logic expression for the adder */
 repeat:
 	any = false;
@@ -110,6 +118,32 @@ repeat:
 
 	if (any)
 		goto repeat;
+#else
+	for (size_t x = 0; x != 2 * MAXVAR; x++) {
+		XORMAP *xn;
+		XORMAP *xm;
+
+		for (XORMAP *xa = TAILQ_FIRST(&eq[x]); xa; xa = xn) {
+			xn = xa->next();
+
+			for (XORMAP *xb = xa->next(); xb; xb = xm) {
+				xm = xb->next();
+
+				any = true;
+
+				*xa ^= *xb;
+				delete xb->remove(&eq[x]);
+				if (xb == xn)
+					xn = xm;
+				if (xa->isZero()) {
+					delete xa->remove(&eq[x]);
+					goto next;
+				}
+			}
+		}
+	next:;
+	}
+#endif
 
 #if 1
 	for (size_t x = 0; x != 2 * MAXVAR; x++) {
@@ -125,14 +159,34 @@ repeat:
 	printf("ZERO REMAINDER: %zd\n", zr);
 
 	/* set all equations equal to zero */
+#if 1
+	BITMAP ored;
+
+	for (size_t x = 0; x != 2 * MAXVAR; x++) {
+		for (XORMAP *xa = TAILQ_FIRST(&eq[x]); xa; xa = xa->next()) {
+			if (xa->isXorConst())
+				(new XORMAP(*xa))->insert_tail(&head);
+			else
+				ored |= xa->toBitMap();
+		}
+		hpsat_free(&eq[x]);
+	}
+	(new XORMAP(ored.toOrMap()))->insert_tail(&head);
+#else
 	for (size_t x = 0; x != 2 * MAXVAR; x++)
 		TAILQ_CONCAT(&head, &eq[x], entry);
-
+#endif
 	hpsat_find_all_ored(&head);
 	hpsat_sort_or(&head);
 
+	printf("START\n");
+	for (XORMAP *xa = TAILQ_FIRST(&head); xa; xa = xa->next()) {
+		xa->print(); printf(" || \n");
+	}
+
 	while (hpsat_simplify_insert(&head)) {
 		printf("LOOP\n");
+		hpsat_sort_or(&head);
 
 		for (XORMAP *xa = TAILQ_FIRST(&head); xa; xa = xa->next()) {
 			xa->print(); printf(" || \n");
