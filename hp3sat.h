@@ -570,8 +570,8 @@ public:
 	ANDMAP & xorify();
 };
 
-extern hpsat_var_t hpsat_maxvar(const ANDMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX);
-extern hpsat_var_t hpsat_minvar(const ANDMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MIN);
+extern hpsat_var_t hpsat_maxvar(const ANDMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX, bool = false);
+extern hpsat_var_t hpsat_minvar(const ANDMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MIN, bool = false);
 extern size_t hpsat_numvar(const ANDMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX, BITMAP * = 0);
 extern void hpsat_merge(ANDMAP_HEAD_t *);
 extern bool hpsat_sort_or(ANDMAP_HEAD_t *);
@@ -615,11 +615,11 @@ public:
 	XORMAP *dup(void) const {
 		return (new XORMAP(*this));
 	};
-	hpsat_var_t maxVar(hpsat_var_t limit = HPSAT_VAR_MAX) const {
-		return (hpsat_maxvar(&head, limit));
+	hpsat_var_t maxVar(hpsat_var_t limit = HPSAT_VAR_MAX, bool xorconst = false) const {
+		return (hpsat_maxvar(&head, limit, xorconst));
 	};
-	hpsat_var_t minVar(hpsat_var_t limit = HPSAT_VAR_MIN) const {
-		return (hpsat_minvar(&head, limit));
+	hpsat_var_t minVar(hpsat_var_t limit = HPSAT_VAR_MIN, bool xorconst = false) const {
+		return (hpsat_minvar(&head, limit, xorconst));
 	};
 	hpsat_var_t findAndVar() const;
 	hpsat_var_t findMaxUsedVariable() const;
@@ -851,8 +851,8 @@ public:
 	};
 };
 
-extern hpsat_var_t hpsat_maxvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX);
-extern hpsat_var_t hpsat_minvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MIN);
+extern hpsat_var_t hpsat_maxvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX, bool = false);
+extern hpsat_var_t hpsat_minvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MIN, bool = false);
 extern size_t hpsat_numvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX, BITMAP * = 0);
 extern void hpsat_demux(XORMAP_HEAD_t *, hpsat_var_t *);
 extern void hpsat_bitmap_to_xormap(const BITMAP_HEAD_t *, XORMAP_HEAD_t *);

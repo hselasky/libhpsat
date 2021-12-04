@@ -48,28 +48,50 @@ hpsat_bitmap_to_andmap(const BITMAP_HEAD_t *bhead, ANDMAP_HEAD_t *ahead)
 }
 
 hpsat_var_t
-hpsat_maxvar(const ANDMAP_HEAD_t *phead, hpsat_var_t limit)
+hpsat_maxvar(const ANDMAP_HEAD_t *phead, hpsat_var_t limit, bool xorconst)
 {
 	hpsat_var_t max = HPSAT_VAR_MIN;
 
-	for (ANDMAP *pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
-		const hpsat_var_t v = pa->maxVar(limit);
-		if (max < v)
-			max = v;
+	if (xorconst == false) {
+		for (ANDMAP *pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
+			const hpsat_var_t v = pa->maxVar(limit);
+			if (max < v)
+				max = v;
+		}
+	} else {
+		for (ANDMAP *pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
+			if (pa->isXorConst() == false)
+				continue;
+			const hpsat_var_t v = pa->maxVar(limit);
+			if (max < v)
+				max = v;
+		}
 	}
 	return (max);
 }
 
 hpsat_var_t
-hpsat_minvar(const ANDMAP_HEAD_t *phead, hpsat_var_t limit)
+hpsat_minvar(const ANDMAP_HEAD_t *phead, hpsat_var_t limit, bool xorconst)
 {
 	hpsat_var_t min = HPSAT_VAR_MIN;
 
-	for (ANDMAP *pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
-		const hpsat_var_t v = pa->minVar(limit);
-		if (v > HPSAT_VAR_MIN) {
-			if (min == HPSAT_VAR_MIN || min > v)
-				min = v;
+	if (xorconst == false) {
+		for (ANDMAP *pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
+			const hpsat_var_t v = pa->minVar(limit);
+			if (v > HPSAT_VAR_MIN) {
+				if (min == HPSAT_VAR_MIN || min > v)
+					min = v;
+			}
+		}
+	} else {
+		for (ANDMAP *pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
+			if (pa->isXorConst() == false)
+				continue;
+			const hpsat_var_t v = pa->minVar(limit);
+			if (v > HPSAT_VAR_MIN) {
+				if (min == HPSAT_VAR_MIN || min > v)
+					min = v;
+			}
 		}
 	}
 	return (min);
