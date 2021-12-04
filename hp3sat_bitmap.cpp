@@ -712,6 +712,26 @@ BITMAP :: findAndVar(size_t index) const
 }
 
 XORMAP
+BITMAP :: toOrMap() const
+{
+	const size_t max = 1UL << nvar;
+	BITMAP work(*this);
+	XORMAP temp(false);
+
+	work.downgrade();
+
+	for (size_t x = 0; x != max; x++) {
+		if (work.peek(x) == 0)
+			continue;
+		ANDMAP *pa = new ANDMAP(true);
+		for (size_t y = 0; y != nvar; y++)
+			(new BITMAP(pvar[y], ~(x >> y) & 1))->insert_tail(&pa->head);
+		pa->sort().insert_tail(&temp.head);
+	}
+	return (temp);
+}
+
+XORMAP
 BITMAP :: toXorMap() const
 {
 	if (isXorConst()) {

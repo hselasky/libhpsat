@@ -264,6 +264,7 @@ public:
 
 	void print() const;
 
+	XORMAP toOrMap() const;
 	XORMAP toXorMap() const;
 
 	int compare(const BITMAP & other, bool = true) const;
