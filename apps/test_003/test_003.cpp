@@ -25,31 +25,47 @@
 
 #include "hp3sat.h"
 
-#define	MAXVAR 8
+#define	MAXVAR 4
 
 int main()
 {
+	XORMAP_HEAD_t eq[2 * MAXVAR];
+	XORMAP_HEAD_t head;
+	XORMAP var[MAXVAR];
 	size_t zc = 0;
 	size_t zr = 0;
-	XORMAP_HEAD_t eq[2 * MAXVAR];
+	bool any;
+
+	for (size_t x = 0; x != MAXVAR; x++)
+		var[x] = XORMAP(x, false);
 
 	for (size_t x = 0; x != 2 * MAXVAR; x++)
 		TAILQ_INIT(&eq[x]);
 
+	TAILQ_INIT(&head);
+
 #if 1
+	/* build a squarer */
 	for (size_t x = 0; x != MAXVAR; x++) {
 		for (size_t y = 0; y != MAXVAR; y++) {
-			(new XORMAP(XORMAP(x,false) & XORMAP(y,false)))->insert_tail(&eq[x + y]);
+			(new XORMAP(var[x] & var[y]))->insert_tail(&eq[x + y]);
 		}
 	}
 #else
+	/* build multiply by three */
 	for (size_t x = 0; x != MAXVAR; x++) {
-		(new XORMAP(XORMAP(x,false)))->insert_tail(&eq[x]);
-		(new XORMAP(XORMAP((x + MAXVAR - 1) % MAXVAR,false)))->insert_tail(&eq[x]);
+		(new XORMAP(var[x]))->insert_tail(&eq[x]);
+		if (x != 0)
+			(new XORMAP(var[x - 1]))->insert_tail(&eq[x]);
 	}
+	(new XORMAP(var[MAXVAR - 1]))->insert_tail(&eq[MAXVAR]);
 #endif
 
-	bool any;
+	/* a + b = 0 */
+	for (size_t x = 0; x != 2 * MAXVAR; x++)
+		(new XORMAP(x + MAXVAR, false))->insert_tail(&eq[x]);
+
+	/* build the logic expression for the adder */
 repeat:
 	any = false;
 	for (size_t x = 0; x != 2 * MAXVAR; x++) {
@@ -93,28 +109,69 @@ repeat:
 	if (any)
 		goto repeat;
 
+#if 0
 	for (size_t x = 0; x != 2 * MAXVAR; x++) {
 		XORMAP *xa = TAILQ_FIRST(&eq[x]);
 		if (xa == 0)
-			continue;
-		if (((127*127) >> x) & 1)
-			*xa ^= XORMAP(true);
+			(new XORMAP(x + MAXVAR, false))->insert_tail(&eq[x]);
+		else
+			*xa ^= XORMAP(x + MAXVAR, false);
 	}
+#endif
 
 	printf("ZERO CARRY: %zd\n", zc);
 	printf("ZERO REMAINDER: %zd\n", zr);
 
-	for (size_t x = 0; x != 2 * MAXVAR; x++) {
-		hpsat_find_ored(&eq[x]);
-		hpsat_find_anded(&eq[x]);
-	}
+	/* set all equations equal to zero */
+	for (size_t x = 0; x != 2 * MAXVAR; x++)
+		TAILQ_CONCAT(&head, &eq[x], entry);
 
-	for (size_t x = 0; x != 2 * MAXVAR; x++) {
-		printf("VAR[%zd] = \n", x);
-		for (XORMAP *xa = TAILQ_FIRST(&eq[x]); xa; xa = xa->next()) {
+	hpsat_find_all_ored(&head);
+	hpsat_sort_or(&head);
+
+	while (hpsat_simplify_insert(&head)) {
+		printf("LOOP\n");
+
+		for (XORMAP *xa = TAILQ_FIRST(&head); xa; xa = xa->next()) {
 			xa->print(); printf(" || \n");
 		}
-		hpsat_free(&eq[x]);
 	}
+
+	/* print all solutions */
+	printf("HEAD = \n");
+
+	uint8_t sol[MAXVAR + 2 * MAXVAR] = {};
+
+	while (1) {
+		size_t a, b;
+
+		for (XORMAP *xa = TAILQ_FIRST(&head); xa; xa = xa->next()) {
+			if (xa->expand_all(sol))
+				goto not_found;
+		}
+		a = b = 0;
+		for (uint8_t x = 0; x != MAXVAR; x++)
+			a += sol[x] << x;
+		for (uint8_t x = 0; x != 2 * MAXVAR; x++)
+			b += sol[MAXVAR + x] << x;
+		printf("SOL %zd %zd\n", a, b);
+not_found:;
+		for (uint8_t x = 0; x != (MAXVAR + 2 * MAXVAR); x++) {
+			sol[x] ^= 1;
+			if (sol[x])
+				break;
+			if (x == (MAXVAR + 2 * MAXVAR - 1))
+				goto done;
+		}
+	}
+done:;
+
+	/* print final equation */
+	for (XORMAP *xa = TAILQ_FIRST(&head); xa; xa = xa->next()) {
+		xa->print(); printf(" || \n");
+	}
+
+	hpsat_free(&head);
+
 	return (0);
 }
