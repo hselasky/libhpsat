@@ -1578,19 +1578,21 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 				pn = pa->next();
 
 				if (pb->isXorConst() && pa->isXorConst()) {
+					hpsat_var_t v = pb->maxVar();
+
 					/* handle special case */
-					if (pa->contains(pb->maxVar()))
-						xored ^= XORMAP(pb->maxVar());
+					if (pa->contains(v))
+						(new ANDMAP(v, false))->insert_tail(&xored.head);
 				} else {
 					ANDMAP t[3] = { *pb, *pa, ANDMAP(true) };
 					hpsat_simplify_split(t[0], t[1], t[2]);
 
 					if (t[0].isOne())
-						xored ^= XORMAP(t[1]);
+						(new ANDMAP(t[1]))->insert_tail(&xored.head);
 				}
 			}
 
-			if (xored.isZero())
+			if (xored.sort().isZero())
 				continue;
 
 			xored &= *xa;
