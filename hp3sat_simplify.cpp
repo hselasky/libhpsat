@@ -1546,6 +1546,7 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 	ANDMAP *pb;
 	ANDMAP *pn;
 
+	XORMAP xored;
 	ANDMAP sel;
 
 	bool any = false;
@@ -1572,8 +1573,6 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 			if (xb == xa)
 				continue;
 
-			XORMAP xored;
-
 			for (pa = xb->first(); pa; pa = pn) {
 				pn = pa->next();
 
@@ -1599,11 +1598,12 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 			if (xored.defactor().isZero())
 				continue;
 
-			*xb ^= xored;
-			any = true;
+			TAILQ_CONCAT(&xb->head, &xored.head, entry);
 
-			if (xb->isZero())
+			if (xb->sort().isZero())
 				delete xb->remove(phead);
+			else
+				any = true;
 		}
 	}
 	return (any);
