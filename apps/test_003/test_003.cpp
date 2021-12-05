@@ -159,23 +159,9 @@ repeat:
 	printf("ZERO REMAINDER: %zd\n", zr);
 
 	/* set all equations equal to zero */
-#if 1
-	BITMAP ored;
-
-	for (size_t x = 0; x != 2 * MAXVAR; x++) {
-		for (XORMAP *xa = TAILQ_FIRST(&eq[x]); xa; xa = xa->next()) {
-			if (xa->isXorConst())
-				(new XORMAP(*xa))->insert_tail(&head);
-			else
-				ored |= xa->toBitMap();
-		}
-		hpsat_free(&eq[x]);
-	}
-	(new XORMAP(ored.toOrMap()))->insert_tail(&head);
-#else
 	for (size_t x = 0; x != 2 * MAXVAR; x++)
 		TAILQ_CONCAT(&head, &eq[x], entry);
-#endif
+
 	hpsat_find_all_ored(&head);
 	hpsat_sort_or(&head);
 
@@ -192,6 +178,8 @@ repeat:
 			xa->print(); printf(" || \n");
 		}
 	}
+
+	hpsat_simplify_redundant(&head);
 
 	/* print all solutions */
 	printf("HEAD = \n");
@@ -210,7 +198,7 @@ repeat:
 			a += sol[x] << x;
 		for (uint8_t x = 0; x != 2 * MAXVAR; x++)
 			b += sol[MAXVAR + x] << x;
-		printf("SOL %zd %zd\n", a, b);
+		printf("SOL %zd %zd REF=%zd\n", a, b, a * a);
 not_found:;
 		for (uint8_t x = 0; x != (MAXVAR + 2 * MAXVAR); x++) {
 			sol[x] ^= 1;
