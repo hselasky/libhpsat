@@ -25,12 +25,13 @@
 
 #include "hp3sat.h"
 
-#define	MAXVAR 5
+#define	MAXVAR 6
 
 int main()
 {
 	XORMAP_HEAD_t eq[2 * MAXVAR];
 	XORMAP_HEAD_t head;
+	XORMAP_HEAD_t last;
 	XORMAP var[MAXVAR];
 	size_t zc = 0;
 	size_t zr = 0;
@@ -43,6 +44,7 @@ int main()
 		TAILQ_INIT(&eq[x]);
 
 	TAILQ_INIT(&head);
+	TAILQ_INIT(&last);
 
 #if 1
 	/* build a squarer */
@@ -178,6 +180,18 @@ repeat:
 			xa->print(); printf(" || \n");
 		}
 	}
+
+	for (XORMAP *xa = TAILQ_FIRST(&head), *xn; xa; xa = xn) {
+		xn = xa->next();
+		for (ANDMAP *pa = xa->first(); pa; pa = pa->next()) {
+			if (pa->count() > 2) {
+				xa->remove(&head)->insert_tail(&last);
+				break;
+			}
+		}
+	}
+
+	TAILQ_CONCAT(&head, &last, entry);
 
 	hpsat_simplify_redundant(&head);
 
