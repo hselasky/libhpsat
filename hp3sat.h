@@ -894,6 +894,7 @@ extern bool hpsat_simplify_assignments(XORMAP_HEAD_t *, BITMAP_HEAD_t *, const B
 extern bool hpsat_simplify_symmetry(XORMAP_HEAD_t *, XORMAP_HEAD_t *, bool);
 extern bool hpsat_simplify_variable_map(XORMAP_HEAD_t *, BITMAP_HEAD_t *);
 extern bool hpsat_simplify_insert(XORMAP_HEAD_t *);
+extern bool hpsat_simplify_redundant(XORMAP_HEAD_t *);
 
 /* explore path functions */
 

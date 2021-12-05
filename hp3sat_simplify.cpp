@@ -1608,3 +1608,30 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 	}
 	return (any);
 }
+
+bool
+hpsat_simplify_redundant(XORMAP_HEAD_t *phead)
+{
+	XORMAP *xa;
+	XORMAP *xn;
+	bool any = false;
+
+	for (xa = TAILQ_LAST(phead, XORMAP_HEAD_t); xa; xa = xn) {
+		xn = xa->prev();
+
+		BITMAP test;
+
+		for (XORMAP *xb = TAILQ_FIRST(phead); xb; xb = xb->next()) {
+			if (xb == xa)
+				continue;
+			test |= xb->toBitMap();
+		}
+
+		/* check if equation pointed to by "xa" is redundant */
+		if ((test | xa->toBitMap()) == test) {
+			delete xa->remove(phead);
+			any = true;
+		}
+	}
+	return (any);
+}
