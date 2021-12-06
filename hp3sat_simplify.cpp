@@ -1616,7 +1616,7 @@ hpsat_simplify_redundant(XORMAP_HEAD_t *phead)
 	XORMAP *xn;
 	bool any = false;
 
-	for (xa = TAILQ_LAST(phead, XORMAP_HEAD_t); xa; xa = xn) {
+	for (xa = TAILQ_LAST(phead, XORMAP_HEAD); xa; xa = xn) {
 		xn = xa->prev();
 
 		BITMAP test;
