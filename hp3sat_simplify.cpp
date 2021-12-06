@@ -1551,6 +1551,8 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 
 	bool any = false;
 
+	size_t count;
+
 	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next())
 		xa->defactor();
 
@@ -1567,10 +1569,16 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 			pb = &sel;
 		}
 
+		count = pb->count();
+
 		for (xb = TAILQ_FIRST(phead); xb; xb = xn) {
 
 			xn = xb->next();
 			if (xb == xa)
+				continue;
+
+			pa = xb->last();
+			if (pa == 0 || pa->count() < count)
 				continue;
 
 			for (pa = xb->first(); pa; pa = pn) {
