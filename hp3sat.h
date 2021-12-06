@@ -863,6 +863,11 @@ extern void hpsat_find_ored(XORMAP_HEAD_t *);
 extern void hpsat_find_all_ored(XORMAP_HEAD_t *);
 extern void hpsat_find_anded(XORMAP_HEAD_t *);
 
+/* adder logic functions */
+
+extern void hpsat_build_single_adder_logic(const XORMAP_HEAD_t *, size_t, XORMAP_HEAD_t *);
+extern void hpsat_build_multi_adder_logic(XORMAP_HEAD_t *, size_t);
+
 /* solve functions */
 
 typedef bool (hpsat_solve_callback_t)(void *, uint8_t *);

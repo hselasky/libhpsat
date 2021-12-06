@@ -13,6 +13,7 @@ CFLAGS+= -g -O0 -DDEBUG
 .endif
 
 SRCS= \
+	hp3sat_adder.cpp \
 	hp3sat_andmap.cpp \
 	hp3sat_bitmap.cpp \
 	hp3sat_cnf.cpp \
