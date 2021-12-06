@@ -1536,7 +1536,7 @@ hpsat_simplify_symmetry(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, bool insert
 }
 
 bool
-hpsat_simplify_insert(XORMAP_HEAD_t *phead)
+hpsat_simplify_insert(XORMAP_HEAD_t *phead, XORMAP_HEAD_t *qhead)
 {
 	XORMAP *xa;
 	XORMAP *xb;
@@ -1556,6 +1556,13 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next())
 		xa->defactor();
 
+	if (qhead != 0) {
+		for (xa = TAILQ_FIRST(qhead); xa; xa = xa->next())
+			xa->defactor();
+	} else {
+		qhead = phead;
+	}
+
 	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next()) {
 		pb = xa->last();
 		if (pb == 0)
@@ -1571,7 +1578,7 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 
 		count = pb->count();
 
-		for (xb = TAILQ_FIRST(phead); xb; xb = xn) {
+		for (xb = TAILQ_FIRST(qhead); xb; xb = xn) {
 
 			xn = xb->next();
 			if (xb == xa)
@@ -1609,7 +1616,7 @@ hpsat_simplify_insert(XORMAP_HEAD_t *phead)
 			TAILQ_CONCAT(&xb->head, &xored.head, entry);
 
 			if (xb->sort().isZero())
-				delete xb->remove(phead);
+				delete xb->remove(qhead);
 			else
 				any = true;
 		}
