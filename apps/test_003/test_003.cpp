@@ -59,8 +59,9 @@ symmetry(XORMAP *xa, XORMAP *xd)
 					*bb ^= BITMAP(v, false);
 				}
 				bb->sort().insert_tail(&pb->head);
-				pb->insert_tail(&xd->head);
 			}
+
+			pb->insert_tail(&xd->head);
 		}
 	}
 	xd->sort();
