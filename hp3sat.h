@@ -128,9 +128,14 @@ public:
 		}
 		return (HPSAT_VAR_MIN);
 	};
-	BITMAP & shiftVar(hpsat_var_t shift) {
+	BITMAP & addVar(hpsat_var_t delta) {
 		for (size_t x = 0; x != nvar; x++)
-			pvar[x] += shift;
+			pvar[x] += delta;
+		return (*this);
+	};
+	BITMAP & mulVar(hpsat_var_t factor) {
+		for (size_t x = 0; x != nvar; x++)
+			pvar[x] *= factor;
 		return (*this);
 	};
 	bool isXorConst() const {
@@ -361,9 +366,14 @@ public:
 	hpsat_var_t minVar(hpsat_var_t limit = HPSAT_VAR_MIN) const {
 		return (hpsat_minvar(&head, limit));
 	};
-	ANDMAP & shiftVar(hpsat_var_t shift) {
+	ANDMAP & addVar(hpsat_var_t delta) {
 		for (BITMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
-			pa->shiftVar(shift);
+			pa->addVar(delta);
+		return (*this);
+	};
+	ANDMAP & mulVar(hpsat_var_t factor) {
+		for (BITMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
+			pa->mulVar(factor);
 		return (*this);
 	};
 	bool isAtomic() const {
@@ -624,9 +634,14 @@ public:
 	hpsat_var_t findAndVar() const;
 	hpsat_var_t findMaxUsedVariable() const;
 
-	XORMAP & shiftVar(hpsat_var_t shift) {
+	XORMAP & addVar(hpsat_var_t delta) {
 		for (ANDMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
-			pa->shiftVar(shift);
+			pa->addVar(delta);
+		return (*this);
+	};
+	XORMAP & mulVar(hpsat_var_t factor) {
+		for (ANDMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
+			pa->mulVar(factor);
 		return (*this);
 	};
 	bool isAtomic() const {
