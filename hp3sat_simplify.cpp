@@ -855,8 +855,8 @@ hpsat_simplify_mixed(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv,
 
 		delete xa;
 
-		zero.expand(v, 0).sort();
-		one.expand(v, 1).sort();
+		zero.expand(v, false).sort();
+		one.expand(v, true).sort();
 
 		if (zero.isZero())
 			(new BITMAP(one))->insert_tail(prod_head + 2 * v + 1);
@@ -947,7 +947,7 @@ hpsat_simplify_mixed(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv,
 	}
 
 	for (ba = TAILQ_FIRST(prod_head + 2 * v + 0); ba; ba = ba->next()) {
-		xa = (new XORMAP(ANDMAP(*ba & BITMAP(v, 1))));
+		xa = (new XORMAP(ANDMAP(*ba & BITMAP(v, true))));
 		if (xa->sort().isZero())
 			delete xa;
 		else
@@ -955,7 +955,7 @@ hpsat_simplify_mixed(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv,
 	}
 
 	for (ba = TAILQ_FIRST(prod_head + 2 * v + 1); ba; ba = ba->next()) {
-		xa = (new XORMAP(ANDMAP(*ba & BITMAP(v, 0))));
+		xa = (new XORMAP(ANDMAP(*ba & BITMAP(v, false))));
 		if (xa->sort().isZero())
 			delete xa;
 		else
