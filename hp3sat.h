@@ -870,6 +870,7 @@ extern hpsat_var_t hpsat_maxvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_M
 extern hpsat_var_t hpsat_minvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MIN, bool = false);
 extern size_t hpsat_numvar(const XORMAP_HEAD_t *, hpsat_var_t = HPSAT_VAR_MAX, BITMAP * = 0);
 extern void hpsat_demux(XORMAP_HEAD_t *, hpsat_var_t *);
+extern void hpsat_demux_ored(XORMAP_HEAD_t *, hpsat_var_t *);
 extern void hpsat_bitmap_to_xormap(const BITMAP_HEAD_t *, XORMAP_HEAD_t *);
 extern bool hpsat_sort_or(XORMAP_HEAD_t *);
 extern void hpsat_free(XORMAP_HEAD_t *);

@@ -192,3 +192,54 @@ top:
 
 	hpsat_sort_or(xhead);
 }
+
+void
+hpsat_demux_ored(XORMAP_HEAD_t *xhead, hpsat_var_t *pvar)
+{
+	XORMAP_HEAD_t temp;
+	XORMAP *xa;
+	XORMAP *xn;
+	hpsat_var_t v;
+	hpsat_var_t u;
+	BITMAP ored;
+
+	TAILQ_INIT(&temp);
+
+	hpsat_find_all_ored(xhead);
+	hpsat_sort_or(xhead);
+
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+
+		ored |= xa->toBitMap();
+
+		if (xn == 0 || xa->compare(*xn, false, false) != 0) {
+			if (ored.nvar < 3) {
+				ored.toOrMap().dup()->insert_tail(&temp);
+			} else {
+				u = *pvar;
+
+				for (size_t x = 0; x != 1UL << ored.nvar; x++) {
+					/* ignore conflicts */
+					if (ored.peek(x))
+						continue;
+					v = (*pvar)++;
+					for (size_t y = 0; y != ored.nvar; y++) {
+						XORMAP xv(v, false);
+						XORMAP yv(ored.pvar[y], (x >> y) & 1);
+						(new XORMAP(xv & yv))->insert_tail(&temp);
+					}
+				}
+
+				XORMAP xored(true);
+				for (v = u; v != *pvar; v++)
+					xored ^= XORMAP(v, false);
+				xored.dup()->insert_tail(&temp);
+			}
+			/* reset "ored" */
+			ored = BITMAP();
+		}
+		delete xa->remove(xhead);
+	}
+	TAILQ_CONCAT(xhead, &temp, entry);
+}
