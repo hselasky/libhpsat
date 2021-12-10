@@ -172,7 +172,9 @@ public:
 		if (isXorConst()) {
 			table = (table[0] & 1) ? bitmap_false : bitmap_true;
 		} else {
-			table[0] ^= 1;
+			size_t size = 1UL << nvar;
+			for (size_t x = 0; x != size; x++)
+				toggle(x);
 		}
 		return (*this);
 	};
