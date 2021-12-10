@@ -38,7 +38,7 @@ static size_t nsol;
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-s] [-h]\n");
+	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-D] [-s] [-h]\n");
 }
 
 static bool
@@ -67,13 +67,16 @@ main(int argc, char **argv)
 
 	signal(SIGPIPE, SIG_IGN);
 
-	while ((c = getopt(argc, argv, "cdhs")) != -1) {
+	while ((c = getopt(argc, argv, "cdDhs")) != -1) {
 		switch (c) {
 		case 'c':
 			count = 1;
 			break;
 		case 'd':
 			demux = 1;
+			break;
+		case 'D':
+			demux = 2;
 			break;
 		case 's':
 			strip = 1;
@@ -94,13 +97,16 @@ main(int argc, char **argv)
 
 	hpsat_squash_or(&head);
 
-	if (demux)
+	if (demux == 1)
 		hpsat_demux(&head, &vm);
 
 	XORMAP_HEAD_t ahead;
 	TAILQ_INIT(&ahead);
 
 	hpsat_bitmap_to_xormap(&head, &ahead);
+
+	if (demux == 2)
+		hpsat_demux_ored(&ahead, &vm);
 
 	XORMAP_HEAD_t xhead;
 	TAILQ_INIT(&xhead);
