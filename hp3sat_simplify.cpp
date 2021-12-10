@@ -25,6 +25,8 @@
 
 #include "hp3sat.h"
 
+#include <stdlib.h>
+
 static int
 hpsat_compare_var_t(const void *pa, const void *pb)
 {
@@ -1135,102 +1137,222 @@ hpsat_simplify_split(ANDMAP &a, ANDMAP &b, ANDMAP &c)
 	}
 }
 
+static int
+hpsat_compare_value(const void *a, const void *b)
+{
+	return ((ANDMAP * const *)a)[0][0].compare(((ANDMAP * const *)b)[0][0], true, false);
+}
+
+static ssize_t
+hpsat_lookup_value(ANDMAP **base, size_t num, ANDMAP **key)
+{
+	ANDMAP **result;
+
+	result = (ANDMAP **)
+	    bsearch(key, base, num, sizeof(base[0]), &hpsat_compare_value);
+
+	if (result == 0)
+		return (-1);
+	else
+		return (result - base);
+}
+
 bool
 hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 {
+	ANDMAP_HEAD_t andmap;
 	XORMAP_HEAD_t temp;
 
+	ANDMAP **phash;
+	XORMAP **plast;
+	size_t nhash;
+
 	XORMAP *xa;
-	XORMAP *xb;
 	XORMAP *xn;
-	XORMAP *xm;
 
 	BITMAP *bm;
 
 	ANDMAP *pa;
 	ANDMAP *pb;
 
+	ssize_t index;
+
+	size_t x;
+	size_t y;
+	size_t z;
+
 	bool any;
 
-	hpsat_sort_or(xhead);
+	/* collect all different kinds of expressions first */
+	TAILQ_INIT(&andmap);
+
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
+		xa->defactor().sort(true);
+		xn = xa->dup();
+		TAILQ_CONCAT(&andmap, &xn->head, entry);
+		delete xn;
+	}
+
+	nhash = 0;
+	for (pa = TAILQ_FIRST(&andmap); pa; pa = pa->next())
+		nhash++;
+
+	/* check if there are no entries */
+	if (nhash == 0)
+		return (false);
+
+	phash = new ANDMAP * [nhash];
+
+	nhash = 0;
+	for (pa = TAILQ_FIRST(&andmap); pa; pa = pa->next())
+		phash[nhash++] = pa;
+
+	mergesort(phash, nhash, sizeof(phash[0]), &hpsat_compare_value);
+
+	for (x = z = 0; x != nhash; ) {
+		for (y = x + 1; y != nhash; y++) {
+			if (hpsat_compare_value(phash + x, phash + y))
+				break;
+			delete phash[y]->remove(&andmap);
+		}
+		phash[z++] = phash[x];
+		x = y;
+	}
+	nhash = z;
+
+	plast = new XORMAP * [nhash];
+	memset(plast, 0, sizeof(plast[0]) * nhash);
+
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+
+		while (1) {
+			if (xa->isZero()) {
+				delete xa->remove(xhead);
+				break;
+			} else if (xa->isOne()) {
+				goto err_one;
+			}
+
+			pa = xa->last();
+
+			index = hpsat_lookup_value(phash, nhash, &pa);
+			if (plast[index] != 0) {
+				/* XXX can use merging here to speed up! */
+				for (pb = plast[index]->first(); pb; pb = pb->next())
+					pb->dup()->insert_tail(&xa->head);
+				xa->sort(true);
+			} else {
+				plast[index] = xa;
+				break;
+			}
+		}
+	}
+
+	for (x = nhash; x--; ) {
+		xa = plast[x];
+		if (xa == 0)
+			continue;
+	repeat:
+		for (pa = xa->last()->prev(); pa; pa = pa->prev()) {
+			if (pa->isOne())
+				break;
+			index = hpsat_lookup_value(phash, nhash, &pa);
+			if (plast[index] != 0) {
+				/* XXX can use merging here to speed up! */
+				for (pb = plast[index]->first(); pb; pb = pb->next())
+					pb->dup()->insert_tail(&xa->head);
+				xa->sort(true);
+				goto repeat;
+			}
+		}
+	}
+
+	hpsat_free(&andmap);
+
+	delete [] plast;
+	delete [] phash;
 
 	TAILQ_INIT(&temp);
 
 	any = false;
-top:
-	/* put easy targets first */
-	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-		xn = xa->next();
+
+	/* get the sorting back to normal */
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next())
+		xa->sort(false);
+
+	while (1) {
+		xa = TAILQ_FIRST(xhead);
+		if (xa == 0)
+			break;
 
 		pa = xa->last();
 		pb = xa->first();
 
-		if (pb != 0 && pb->isOne() && pb->next() == pa) {
-			xa->remove(xhead)->insert_head(xhead);
-		} else if (xa->isXorConst()) {
-			xa->remove(xhead)->insert_head(xhead);
-		}
-	}
-
-	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-		xn = xa->next();
-
-		if (xa->isZero()) {
-			delete xa->remove(xhead);
+		if (pb->isOne() && pb->next() == pa) {
+		} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
 		} else {
-			pa = xa->last();
-			pb = xa->first();
+			/* put the easy targets first */
+			for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+				xn = xa->next();
 
-			if (pb == 0)
-				continue;
+				pa = xa->last();
+				pb = xa->first();
 
-			if (pb->isOne() && pb->next() == pa) {
-				xa->remove(xhead);
-				for (bm = pa->first(); bm; bm = bm->next()) {
-					bm->toggleInverted();
-					any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
+				if (pb->isOne() && pb->next() == pa) {
+					xa->remove(xhead)->insert_head(xhead);
+				} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
+					xa->remove(xhead)->insert_head(xhead);
 				}
-				if (pderiv) {
-					TAILQ_CONCAT(&temp, pderiv, entry);
-					TAILQ_CONCAT(pderiv, &temp, entry);
-				}
-				delete xa;
-				goto top;
-			} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
-				xa->remove(xhead);
-				bm = xa->first()->first();
-				any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
-
-				if (pderiv) {
-					TAILQ_CONCAT(&temp, pderiv, entry);
-					TAILQ_CONCAT(pderiv, &temp, entry);
-				}
-				delete xa;
-				goto top;
-			}
-
-			for (xb = TAILQ_FIRST(xhead); xb; xb = xm) {
-				xm = xb->next();
-
-				if (xb == xa ||
-				    xb->contains(*pa, pa->isXorConst()) == false)
-					continue;
-				*xb ^= *xa;
-
-				if (xb->isZero()) {
-					if (xn == xb)
-						xn = xm;
-					delete xb->remove(xhead);
-				}
-				any = true;
 			}
 		}
+
+		xa = TAILQ_FIRST(xhead);
+
+		pa = xa->last();
+		pb = xa->first();
+
+		if (pb->isOne() && pb->next() == pa) {
+			xa->remove(xhead);
+			for (bm = pa->first(); bm; bm = bm->next()) {
+				bm->toggleInverted();
+				any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
+			}
+			if (pderiv) {
+				TAILQ_CONCAT(&temp, pderiv, entry);
+				TAILQ_CONCAT(pderiv, &temp, entry);
+			}
+			delete xa;
+			continue;
+		} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
+			bm = xa->remove(xhead)->first()->first();
+			any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
+
+			if (pderiv) {
+				TAILQ_CONCAT(&temp, pderiv, entry);
+				TAILQ_CONCAT(pderiv, &temp, entry);
+			}
+			delete xa;
+			continue;
+		}
+		break;
 	}
 
 	if (pderiv == 0)
 		hpsat_underiv(xhead, &temp);
 
 	return (any);
+err_one:
+	xa->remove(xhead);
+	hpsat_free(xhead);
+	xa->insert_tail(xhead);
+
+	hpsat_free(&andmap);
+
+	delete [] plast;
+	delete [] phash;
+
+	return (false);
 }
 
 bool
