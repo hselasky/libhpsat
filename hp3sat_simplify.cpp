@@ -1158,6 +1158,20 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 
 	any = false;
 top:
+	/* put easy targets first */
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+
+		pa = xa->last();
+		pb = xa->first();
+
+		if (pb != 0 && pb->isOne() && pb->next() == pa) {
+			xa->remove(xhead)->insert_head(xhead);
+		} else if (xa->isXorConst()) {
+			xa->remove(xhead)->insert_head(xhead);
+		}
+	}
+
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
 
