@@ -204,8 +204,6 @@ public:
 	bool contains(hpsat_var_t var) const {
 		if (nvar == 0)
 			return (false);
-		if (var < pvar[0] || var > pvar[nvar - 1])
-			return (false);
 		return (hpsat_binsearch(pvar, nvar, var) != -1);
 	};
 	BITMAP & operator =(const BITMAP &other);

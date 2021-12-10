@@ -25,55 +25,35 @@
 
 #include "hp3sat.h"
 
+#include <stdlib.h>
+
 uint8_t bitmap_true[1] = {1};
 uint8_t bitmap_false[1] = {0};
+
+static int
+hpsat_compare_var(const void *a, const void *b)
+{
+	hpsat_var_t va = *(const hpsat_var_t *)a;
+	hpsat_var_t vb = *(const hpsat_var_t *)b;
+
+	if (va > vb)
+		return (1);
+	else if (va < vb)
+		return (-1);
+	else
+		return (0);
+}
 
 ssize_t
 hpsat_binsearch(const hpsat_var_t *ptr, size_t max, hpsat_var_t v)
 {
-	size_t x;
+	const hpsat_var_t *pmatch = (const hpsat_var_t *)
+	    bsearch(&v, ptr, max, sizeof(ptr[0]), &hpsat_compare_var);
 
-	switch (max) {
-	case 0:
-		goto failure;
-	case 1:
-		return ((ptr[0] == v) ? 0 : -1);
-	case 2:
-		return ((ptr[0] == v) ? 0 :
-			(ptr[1] == v) ? 1 : -1);
-	default:
-		break;
-	}
-
-	for (x = 1; x < max; x *= 2) {
-		if (ptr[x] > v)
-			break;
-		else if (ptr[x] == v)
-			return (x);
-	}
-
-	x /= 2;
-
-	for (size_t y = x / 2;; y /= 2) {
-		if ((x + y) >= max)
-			continue;
-		if (ptr[x + y] < v) {
-			if (y == 0)
-				goto failure;
-			else
-				x += y;
-		} else if (ptr[x + y] == v) {
-			return (x + y);
-		} else if (y == 0) {
-			goto failure;
-		}
-	}
-failure:
-#ifdef DEBUG
-	for (size_t y = 0; y != max; y++)
-		assert(ptr[y] != v);
-#endif
-	return (-1);
+	if (pmatch == 0)
+		return (-1);
+	else
+		return (pmatch - ptr);
 }
 
 BITMAP &
