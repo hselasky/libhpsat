@@ -410,8 +410,7 @@ hpsat_find_all_ored(XORMAP_HEAD_t *phead)
 	for (xa = TAILQ_FIRST(phead); xa; xa = xn) {
 		xn = xa->next();
 
-		if (xa->isXorConst() ||
-		    xa->first()->next() == 0)
+		if (xa->isZero() || xa->isOne())
 			continue;
 
 		*xa = xa->toBitMap().toOrMap();
