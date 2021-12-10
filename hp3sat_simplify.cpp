@@ -817,6 +817,78 @@ err_one:
 	return (false);
 }
 
+void
+hpsat_simplify_conflicts(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t v)
+{
+	XORMAP_HEAD_t prod_head[2];
+	size_t count[2] = {};
+
+	XORMAP *xa;
+	XORMAP *xb;
+	XORMAP *xn;
+
+	TAILQ_INIT(prod_head + 0);
+	TAILQ_INIT(prod_head + 1);
+
+	(new XORMAP(false))->insert_head(pderiv);
+
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+		if (xa->contains(v) == false)
+			continue;
+
+		XORMAP zero(*xa);
+		XORMAP one(*xa);
+
+		xa->remove(xhead)->insert_head(pderiv);
+
+		zero.expand(v, false);
+		one.expand(v, true);
+
+		if (zero.isZero())
+			one.dup()->insert_tail(prod_head + 1);
+		else
+			zero.dup()->insert_tail(prod_head + 0);
+	}
+
+	hpsat_sort_or(prod_head + 0);
+	hpsat_sort_or(prod_head + 1);
+
+	for (xa = TAILQ_FIRST(prod_head + 0); xa; xa = xa->next())
+		count[0]++;
+	for (xb = TAILQ_FIRST(prod_head + 1); xb; xb = xb->next())
+		count[1]++;
+
+	if (count[0] < count[1]) {
+		for (xa = TAILQ_FIRST(prod_head + 0); xa; xa = xa->next()) {
+			for (xb = TAILQ_FIRST(prod_head + 1); xb; xb = xb->next()) {
+				xn = new XORMAP(*xa & *xb);
+				if (xn->sort().isZero())
+					delete xn;
+				else
+					xn->insert_tail(xhead);
+			}
+			hpsat_sort_or(xhead);
+		}
+	} else {
+		for (xb = TAILQ_FIRST(prod_head + 1); xb; xb = xb->next()) {
+			for (xa = TAILQ_FIRST(prod_head + 0); xa; xa = xa->next()) {
+				xn = new XORMAP(*xa & *xb);
+				if (xn->sort().isZero())
+					delete xn;
+				else
+					xn->insert_tail(xhead);
+			}
+			hpsat_sort_or(xhead);
+		}
+	}
+
+	hpsat_free(prod_head + 0);
+	hpsat_free(prod_head + 1);
+
+	(new XORMAP(v, false))->insert_head(pderiv);
+}
+
 bool
 hpsat_simplify_mixed(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv,
     BITMAP_HEAD_t *prod_head, hpsat_var_t v, hpsat_var_t vmax)
