@@ -1157,6 +1157,49 @@ hpsat_lookup_value(ANDMAP **base, size_t num, ANDMAP **key)
 		return (result - base);
 }
 
+static void
+hpsat_merge_xor(const XORMAP &from, XORMAP &to)
+{
+	ANDMAP_HEAD_t temp;
+	ANDMAP *xa;
+	ANDMAP *xb;
+	ANDMAP *xp;
+
+	TAILQ_INIT(&temp);
+	TAILQ_CONCAT(&temp, &to.head, entry);
+
+	xa = from.first();
+	xb = TAILQ_FIRST(&temp);
+
+	while (xa && xb) {
+		switch (xa->compare(*xb, true, false)) {
+		case 0:
+			/* same value on both cancels */
+			xa = xa->next();
+			xp = xb;
+			xb = xb->next();
+			delete xp->remove(&temp);
+			break;
+		case 1:
+			xp = xb;
+			xb = xb->next();
+			xp->remove(&temp)->insert_tail(&to.head);
+			break;
+		default:
+			xp = xa;
+			xa = xa->next();
+			xp->dup()->insert_tail(&to.head);
+			break;
+		}
+	}
+	while (xa) {
+		xp = xa;
+		xa = xa->next();
+		xp->dup()->insert_tail(&to.head);
+	}
+	TAILQ_CONCAT(&to.head, &temp, entry);
+}
+
 bool
 hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 {
@@ -1238,10 +1281,7 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 
 			index = hpsat_lookup_value(phash, nhash, &pa);
 			if (plast[index] != 0) {
-				/* XXX can use merging here to speed up! */
-				for (pb = plast[index]->first(); pb; pb = pb->next())
-					pb->dup()->insert_tail(&xa->head);
-				xa->sort(true);
+				hpsat_merge_xor(*plast[index], *xa);
 			} else {
 				plast[index] = xa;
 				break;
@@ -1259,10 +1299,7 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 				break;
 			index = hpsat_lookup_value(phash, nhash, &pa);
 			if (plast[index] != 0) {
-				/* XXX can use merging here to speed up! */
-				for (pb = plast[index]->first(); pb; pb = pb->next())
-					pb->dup()->insert_tail(&xa->head);
-				xa->sort(true);
+				hpsat_merge_xor(*plast[index], *xa);
 				goto repeat;
 			}
 		}
