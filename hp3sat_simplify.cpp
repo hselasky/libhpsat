@@ -1140,7 +1140,7 @@ hpsat_simplify_split(ANDMAP &a, ANDMAP &b, ANDMAP &c)
 static int
 hpsat_compare_value(const void *a, const void *b)
 {
-	return ((ANDMAP * const *)a)[0][0].compare(((ANDMAP * const *)b)[0][0], true, false);
+	return ((ANDMAP * const *)a)[0][0].compare(((ANDMAP * const *)b)[0][0]);
 }
 
 static ssize_t
@@ -1172,7 +1172,7 @@ hpsat_merge_xor(XORMAP &from, XORMAP &to, bool doFreeFrom)
 	xb = TAILQ_FIRST(&temp);
 
 	while (xa && xb) {
-		switch (xa->compare(*xb, true, false)) {
+		switch (xa->compare(*xb)) {
 		case 0:
 			/* same value on both cancels */
 			xp = xa;
@@ -1242,7 +1242,8 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 	TAILQ_INIT(&andmap);
 
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
-		xa->defactor().sort(true);
+		xa->defactor();
+		hpsat_sort_xor_no_accumulate(&xa->head);
 		xn = xa->dup();
 		TAILQ_CONCAT(&andmap, &xn->head, entry);
 		delete xn;
@@ -1342,13 +1343,15 @@ repeat_0:
 
 				hpsat_simplify_split(t[0], t[1], t[2]);
 
-				if (t[0].isOne()) {
-					for (pc = xa->first(); pc; pc = pc->next())
-						(new ANDMAP(t[1] & *pc))->insert_tail(&xored.head);
-				}
+				if (t[0].isOne() == false)
+					continue;
+				for (pc = xa->first(); pc; pc = pc->next())
+					(new ANDMAP(t[1] & *pc))->insert_tail(&xored.head);
 			}
 
-			if (xored.sort(true).isZero())
+			hpsat_sort_xor_no_accumulate(&xored.head);
+
+			if (xored.isZero())
 				continue;
 
 			hpsat_merge_xor(xored, *xb, true);
@@ -1358,7 +1361,7 @@ repeat_0:
 			pb = xb->last();
 
 			/* check if the last ANDMAP changed */
-			if (pb == 0 || pb->compare(*phash[y], true, false)) {
+			if (pb == 0 || hpsat_compare_value(&pb, phash + y) != 0) {
 				plast[y] = 0;
 
 				while (1) {
@@ -1380,7 +1383,7 @@ repeat_0:
 
 						/* insertion sort */
 						for (z = y; z != 0; z--) {
-							if (phash[z - 1]->compare(*phash[z], true, false) > 0) {
+							if (hpsat_compare_value(phash + z - 1, phash + z) > 0) {
 								HPSAT_SWAP(phash[z - 1], phash[z]);
 								HPSAT_SWAP(plast[z - 1], plast[z]);
 								/* update "x" if needed */
@@ -1399,7 +1402,6 @@ repeat_0:
 					}
 				}
 			}
-
 		}
 	}
 
@@ -1417,7 +1419,7 @@ repeat_0:
 
 	/* get the sorting back to normal */
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next())
-		xa->sort(false);
+		xa->sort();
 
 	while (1) {
 		xa = TAILQ_FIRST(xhead);

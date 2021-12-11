@@ -112,12 +112,6 @@ hpsat_compare_default(const void *a, const void *b)
 	return ((ANDMAP * const *)a)[0][0].compare(((ANDMAP * const *)b)[0][0]);
 }
 
-static int
-hpsat_compare_value(const void *a, const void *b)
-{
-	return ((ANDMAP * const *)a)[0][0].compare(((ANDMAP * const *)b)[0][0], true, false);
-}
-
 void
 hpsat_merge(ANDMAP_HEAD_t *phead)
 {
@@ -270,7 +264,7 @@ hpsat_sort_xor_accumulate(ANDMAP_HEAD_t *phead)
 }
 
 bool
-hpsat_sort_xor_value(ANDMAP_HEAD_t *phead)
+hpsat_sort_xor_no_accumulate(ANDMAP_HEAD_t *phead)
 {
 	ANDMAP *pa;
 	ANDMAP **pp;
@@ -318,19 +312,19 @@ hpsat_sort_xor_value(ANDMAP_HEAD_t *phead)
 	}
 
 	for (x = 1; x != count; x++) {
-		if (hpsat_compare_value(pp + x - 1, pp + x) > 0) {
+		if (hpsat_compare_default(pp + x - 1, pp + x) > 0) {
 			did_sort = true;
 			break;
 		}
 	}
 	if (did_sort)
-		mergesort(pp, count, sizeof(pp[0]), &hpsat_compare_value);
+		mergesort(pp, count, sizeof(pp[0]), &hpsat_compare_default);
 
 	TAILQ_INIT(phead);
 
 	for (x = 0; x != count; ) {
 		for (y = x + 1; y != count; y++) {
-			if (hpsat_compare_value(pp + x, pp + y) != 0)
+			if (hpsat_compare_default(pp + x, pp + y) != 0)
 				break;
 		}
 		/* XOR magic */

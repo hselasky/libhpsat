@@ -85,12 +85,9 @@ hpsat_free(XORMAP_HEAD_t *phead)
 }
 
 XORMAP &
-XORMAP :: sort(bool byValue)
+XORMAP :: sort()
 {
-	if (byValue)
-		hpsat_sort_xor_value(&head);
-	else
-		hpsat_sort_xor_accumulate(&head);
+	hpsat_sort_xor_accumulate(&head);
 	return (*this);
 }
 
@@ -263,10 +260,10 @@ XORMAP :: isXorAble(hpsat_var_t var) const
 }
 
 XORMAP &
-XORMAP :: defactor(bool byValue)
+XORMAP :: defactor()
 {
 	hpsat_simplify_defactor(&head);
-	return (sort(byValue));
+	return (sort());
 }
 
 const XORMAP &
@@ -508,7 +505,7 @@ XORMAP :: implication()
 
 	*this ^= impl;
 
-	sort(true);
+	hpsat_sort_xor_no_accumulate(&head);
 
 	TAILQ_INIT(&rem);
 
