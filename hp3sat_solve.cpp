@@ -71,23 +71,37 @@ solve:
 
 	TAILQ_CONCAT(xhead, &temp, entry);
 
-	while (hpsat_simplify_xormap(xhead, pderiv))
+	while (hpsat_simplify_xormap(xhead))
 		;
 
 	uint8_t taken[(vm + 7) / 8];
 	memset(taken, 0, sizeof(taken));
+	size_t ntaken = 0;
 
-	for (xa = TAILQ_FIRST(pderiv); xa != 0; xa = xa->next()) {
-		hpsat_var_t v = xa->maxVar();
+	while (ntaken != vm) {
+		hpsat_var_t v,w;
+		size_t stats[vm];
+		memset(stats, 0, sizeof(stats));
+
+		for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xa->next()) {
+			  v = HPSAT_VAR_MAX;
+			  while ((v = xa->maxVar(v)) != HPSAT_VAR_MIN)
+				stats[v]++;
+		}
+
+		for (v = w = 0; w != vm; w++) {
+			if (stats[v] == 0 || (stats[w] != 0 && stats[w] < stats[v]))
+				v = w;
+		}
+
+		if (stats[v] == 0) {
+			for (v = vm; v--; ) {
+				if (~taken[v / 8] & (1 << (v % 8)))
+					break;
+			}
+		}
 		taken[v / 8] |= (1 << (v % 8));
-
-		for (xa = xa->next(); !xa->isZero(); xa = xa->next())
-			;
-	}
-
-	for (hpsat_var_t v = vm; v--; ) {
-		if (taken[v / 8] & (1 << (v % 8)))
-			continue;
+		ntaken++;
 
 		printf("c PROGRESS v%zd\n", v);
 
@@ -96,9 +110,6 @@ solve:
 
 		TAILQ_INIT(&ahead);
 		TAILQ_INIT(&thead);
-
-		while (hpsat_simplify_xormap(xhead, 0))
-			;
 
 		for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
 			xn = xa->next();
@@ -130,7 +141,27 @@ solve:
 			}
 		}
 
-		TAILQ_CONCAT(xhead, &thead, entry);
+		if (TAILQ_FIRST(&thead)) {
+			TAILQ_CONCAT(xhead, &thead, entry);
+
+			while (hpsat_simplify_xormap(xhead))
+				;
+		}
+
+		for (xa = TAILQ_FIRST(&ahead); xa; xa = xa->next()) {
+			XORMAP temp[2] = { *xa, *xa };
+
+			temp[0].expand(v, false);
+			temp[1].expand(v, true);
+
+			/* check if variable "v" is assigned */
+			if ((temp[0] ^ temp[1]).isOne()) {
+				xa->remove(&ahead);
+				hpsat_free(&ahead);
+				xa->insert_tail(&ahead);
+				break;
+			}
+		}
 
 		(new XORMAP(false))->insert_tail(&ahead);
 		(new XORMAP(v,false))->insert_head(&ahead);
