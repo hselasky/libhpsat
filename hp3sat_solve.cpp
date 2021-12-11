@@ -89,41 +89,46 @@ solve:
 		if (taken[v / 8] & (1 << (v % 8)))
 			continue;
 
+		printf("c PROGRESS v%zd\n", v);
+
 		XORMAP_HEAD_t ahead;
 		XORMAP_HEAD_t thead;
 
 		TAILQ_INIT(&ahead);
 		TAILQ_INIT(&thead);
 
+		while (hpsat_simplify_xormap(xhead, 0))
+			;
+
 		for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
 			xn = xa->next();
 			if (xa->contains(v))
 				xa->remove(xhead)->insert_tail(&ahead);
-
 		}
 
-		while (hpsat_simplify_xormap(&ahead, 0))
-			;
-
-		hpsat_find_ored(&ahead);
-		hpsat_find_anded(&ahead);
-
-		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xn) {
-			xn = xa->next();
+		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xa->next()) {
+			XORMAP temp_a[2] = { *xa, *xa };
+			temp_a[0].expand(v, false);
+			temp_a[1].expand(v, true);
 
 			for (xb = xa->next(); xb != 0; xb = xb->next()) {
-				if (xb->isZero())
-					continue;
-				xa->xored(*xb, v, &thead);
+				XORMAP temp_b[2] = { *xb, *xb };
+				temp_b[0].expand(v, false);
+				temp_b[1].expand(v, true);
+
+				xn = new XORMAP(temp_a[0] & temp_b[1]);
+				if (xn->defactor().isZero())
+					delete xn;
+				else
+					xn->insert_tail(&thead);
+
+				xn = new XORMAP(temp_a[1] & temp_b[0]);
+				if (xn->defactor().isZero())
+					delete xn;
+				else
+					xn->insert_tail(&thead);
 			}
-			if (xa->isZero())
-				delete xa->remove(&ahead);
 		}
-
-		hpsat_sort_or(&thead);
-
-		hpsat_find_ored(&thead);
-		hpsat_find_anded(&thead);
 
 		TAILQ_CONCAT(xhead, &thead, entry);
 
