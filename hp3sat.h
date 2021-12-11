@@ -903,7 +903,7 @@ extern bool hpsat_simplify_deriv(XORMAP_HEAD_t *, XORMAP_HEAD_t * = 0);
 extern void hpsat_simplify_conflicts(XORMAP_HEAD_t *, XORMAP_HEAD_t *, hpsat_var_t);
 extern bool hpsat_simplify_mixed(XORMAP_HEAD_t *, XORMAP_HEAD_t *, BITMAP_HEAD_t *, hpsat_var_t, hpsat_var_t);
 extern bool hpsat_simplify_all(XORMAP_HEAD_t *, XORMAP_HEAD_t *, hpsat_var_t);
-extern bool hpsat_simplify_xormap(XORMAP_HEAD_t *, XORMAP_HEAD_t * = 0);
+extern bool hpsat_simplify_xormap(XORMAP_HEAD_t *);
 extern void hpsat_simplify_defactor(XORMAP_HEAD_t *);
 extern bool hpsat_simplify_defactor(ANDMAP_HEAD_t *);
 extern bool hpsat_simplify_factor(XORMAP_HEAD_t *, ANDMAP_HEAD_t *);

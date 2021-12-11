@@ -1211,10 +1211,9 @@ hpsat_merge_xor(XORMAP &from, XORMAP &to, bool doFreeFrom)
 }
 
 bool
-hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
+hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 {
 	ANDMAP_HEAD_t andmap;
-	XORMAP_HEAD_t temp;
 
 	ANDMAP **phash;
 	XORMAP **plast;
@@ -1325,6 +1324,8 @@ repeat_0:
 
 	/* insertion step */
 
+	printf("c NHASH=%zd\n", nhash);
+
 	for (x = 0; x != nhash; x++) {
 		xa = plast[x];
 		if (xa == 0)
@@ -1413,8 +1414,6 @@ repeat_0:
 	delete [] plast;
 	delete [] phash;
 
-	TAILQ_INIT(&temp);
-
 	any = false;
 
 	/* get the sorting back to normal */
@@ -1423,7 +1422,7 @@ repeat_0:
 
 	while (1) {
 		xa = TAILQ_FIRST(xhead);
-		if (xa == 0)
+		if (xa == 0 || xa->isXorConst())
 			break;
 
 		pa = xa->last();
@@ -1433,6 +1432,9 @@ repeat_0:
 			/* put the easy targets first */
 			for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 				xn = xa->next();
+
+				if (xa->isXorConst())
+					continue;
 
 				pa = xa->last();
 				pb = xa->first();
@@ -1451,22 +1453,16 @@ repeat_0:
 			xa->remove(xhead);
 			for (bm = pa->first(); bm; bm = bm->next()) {
 				bm->toggleInverted();
-				any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
-			}
-			if (pderiv) {
-				TAILQ_CONCAT(&temp, pderiv, entry);
-				TAILQ_CONCAT(pderiv, &temp, entry);
+				(new XORMAP(*bm))->insert_tail(xhead);
+				any = true;
 			}
 			delete xa;
 			continue;
 		}
 		break;
 	}
-
-	if (pderiv == 0)
-		hpsat_underiv(xhead, &temp);
-
 	return (any);
+
 err_one:
 	xa->remove(xhead);
 	hpsat_free(xhead);
