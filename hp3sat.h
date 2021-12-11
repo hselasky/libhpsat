@@ -654,8 +654,13 @@ public:
 			return (true);
 		else if (pa != 0 && pa->next() == 0)
 			return (pa->isXorConst());
-		else
-			return (false);
+		else {
+			for (pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
+				if (pa->isXorConst() == false)
+					return (false);
+			}
+			return (true);
+		}
 	};
 	bool isXorConst(hpsat_var_t var) const {
 		for (ANDMAP *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
