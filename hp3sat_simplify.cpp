@@ -597,51 +597,6 @@ err_one:
 	xa->insert_tail(xhead);
 }
 
-static bool
-hpsat_substitute(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t v, const BITMAP &expr)
-{
-	XORMAP *xa;
-	XORMAP *xn;
-	bool any;
-
-	if (expr.isZero()) {
-		return (false);
-	} else if (expr.isOne()) {
-		hpsat_free(xhead);
-		(new XORMAP(expr))->insert_head(xhead);
-		return (false);
-	}
-
-	printf("c SUBSTITUTED "); expr.print(); printf(" # v%zd\n", v);
-
-	assert(expr.contains(v));
-
-	any = false;
-
-	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-		xn = xa->next();
-
-		if (xa->contains(v) == false)
-			continue;
-		any = true;
-
-		if (xa->substitute(v, expr).isZero())
-			delete xa->remove(xhead);
-		else if (xa->isOne())
-			goto err_one;
-	}
-
-	(new XORMAP(false))->insert_head(pderiv);
-	(new XORMAP(expr))->insert_head(pderiv);
-	(new XORMAP(v,false))->insert_head(pderiv);
-	return (any);
-err_one:
-	xa->remove(xhead);
-	hpsat_free(xhead);
-	xa->insert_tail(xhead);
-	return (any);
-}
-
 bool
 hpsat_simplify_deriv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 {
@@ -1416,51 +1371,41 @@ repeat_0:
 
 	any = false;
 
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+		pa = xa->first();
+		if (pa == 0 || pa->isOne() == false || xa->isXorConst())
+			continue;
+		pb = pa->next();
+		if (pb == 0)
+			continue;
+		ANDMAP t[3];
+
+		t[0] = *pb;
+		for (pb = pb->next(); pb; pb = pb->next()) {
+			t[1] = *pb;
+			t[2] = ANDMAP(true);
+			hpsat_simplify_split(t[0], t[1], t[2]);
+			t[0] = t[2];
+			if (t[0].isOne())
+				break;
+		}
+		if (t[0].isOne())
+			continue;
+
+		xa->remove(xhead);
+		for (bm = t[0].first(); bm; bm = bm->next()) {
+			bm->toggleInverted();
+			(new XORMAP(*bm))->insert_head(xhead);
+			any = true;
+		}
+		delete xa;
+	}
+
 	/* get the sorting back to normal */
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next())
 		xa->sort();
 
-	while (1) {
-		xa = TAILQ_FIRST(xhead);
-		if (xa == 0 || xa->isXorConst())
-			break;
-
-		pa = xa->last();
-		pb = xa->first();
-
-		if (pb->isOne() == false || pb->next() != pa) {
-			/* put the easy targets first */
-			for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-				xn = xa->next();
-
-				if (xa->isXorConst())
-					continue;
-
-				pa = xa->last();
-				pb = xa->first();
-
-				if (pb->isOne() && pb->next() == pa)
-					xa->remove(xhead)->insert_head(xhead);
-			}
-		}
-
-		xa = TAILQ_FIRST(xhead);
-
-		pa = xa->last();
-		pb = xa->first();
-
-		if (pb->isOne() && pb->next() == pa) {
-			xa->remove(xhead);
-			for (bm = pa->first(); bm; bm = bm->next()) {
-				bm->toggleInverted();
-				(new XORMAP(*bm))->insert_tail(xhead);
-				any = true;
-			}
-			delete xa;
-			continue;
-		}
-		break;
-	}
 	return (any);
 
 err_one:
