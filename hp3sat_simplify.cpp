@@ -1158,7 +1158,7 @@ hpsat_lookup_value(ANDMAP **base, size_t num, ANDMAP **key)
 }
 
 static void
-hpsat_merge_xor(const XORMAP &from, XORMAP &to)
+hpsat_merge_xor(XORMAP &from, XORMAP &to, bool doFreeFrom)
 {
 	ANDMAP_HEAD_t temp;
 	ANDMAP *xa;
@@ -1175,7 +1175,10 @@ hpsat_merge_xor(const XORMAP &from, XORMAP &to)
 		switch (xa->compare(*xb, true, false)) {
 		case 0:
 			/* same value on both cancels */
+			xp = xa;
 			xa = xa->next();
+			if (doFreeFrom)
+				delete xp->remove(&from.head);
 			xp = xb;
 			xb = xb->next();
 			delete xp->remove(&temp);
@@ -1188,14 +1191,21 @@ hpsat_merge_xor(const XORMAP &from, XORMAP &to)
 		default:
 			xp = xa;
 			xa = xa->next();
-			xp->dup()->insert_tail(&to.head);
+			if (doFreeFrom)
+				xp->remove(&from.head)->insert_tail(&to.head);
+			else
+				xp->dup()->insert_tail(&to.head);
 			break;
 		}
 	}
-	while (xa) {
-		xp = xa;
-		xa = xa->next();
-		xp->dup()->insert_tail(&to.head);
+	if (doFreeFrom) {
+		TAILQ_CONCAT(&to.head, &from.head, entry);
+	} else {
+		while (xa) {
+			xp = xa;
+			xa = xa->next();
+			xp->dup()->insert_tail(&to.head);
+		}
 	}
 	TAILQ_CONCAT(&to.head, &temp, entry);
 }
@@ -1211,12 +1221,14 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 	size_t nhash;
 
 	XORMAP *xa;
+	XORMAP *xb;
 	XORMAP *xn;
 
 	BITMAP *bm;
 
 	ANDMAP *pa;
 	ANDMAP *pb;
+	ANDMAP *pc;
 
 	ssize_t index;
 
@@ -1280,8 +1292,10 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 			pa = xa->last();
 
 			index = hpsat_lookup_value(phash, nhash, &pa);
+			assert(index != -1);
+
 			if (plast[index] != 0) {
-				hpsat_merge_xor(*plast[index], *xa);
+				hpsat_merge_xor(*plast[index], *xa, false);
 			} else {
 				plast[index] = xa;
 				break;
@@ -1289,21 +1303,108 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 		}
 	}
 
+repeat_0:
+	any = false;
+
 	for (x = nhash; x--; ) {
 		xa = plast[x];
 		if (xa == 0)
 			continue;
-	repeat:
+	repeat_1:
 		for (pa = xa->last()->prev(); pa; pa = pa->prev()) {
 			if (pa->isOne())
 				break;
 			index = hpsat_lookup_value(phash, nhash, &pa);
-			if (plast[index] != 0) {
-				hpsat_merge_xor(*plast[index], *xa);
-				goto repeat;
+			if (index != -1 && plast[index] != 0) {
+				hpsat_merge_xor(*plast[index], *xa, false);
+				goto repeat_1;
 			}
 		}
 	}
+
+	/* insertion step */
+
+	for (x = 0; x != nhash; x++) {
+		xa = plast[x];
+		if (xa == 0)
+			continue;
+		pa = xa->last();
+
+		for (y = x + 1; y != nhash; y++) {
+			xb = plast[y];
+			if (xb == 0)
+				continue;
+
+			XORMAP xored;
+
+			for (pb = xb->first(); pb; pb = pb->next()) {
+				ANDMAP t[3] = { *pa, *pb, ANDMAP(true) };
+
+				hpsat_simplify_split(t[0], t[1], t[2]);
+
+				if (t[0].isOne()) {
+					for (pc = xa->first(); pc; pc = pc->next())
+						(new ANDMAP(t[1] & *pc))->insert_tail(&xored.head);
+				}
+			}
+
+			if (xored.sort(true).isZero())
+				continue;
+
+			hpsat_merge_xor(xored, *xb, true);
+
+			any = true;
+
+			pb = xb->last();
+
+			/* check if the last ANDMAP changed */
+			if (pb == 0 || pb->compare(*phash[y], true, false)) {
+				plast[y] = 0;
+
+				while (1) {
+					if (xb->isZero()) {
+						delete xb->remove(xhead);
+						break;
+					} else if (xb->isOne()) {
+						xa = xb;
+						goto err_one;
+					}
+
+					pb = xb->last();
+
+					index = hpsat_lookup_value(phash, nhash, &pb);
+					if (index == -1) {
+						/* the entry doesn't exist, so we need to re-hash */
+						*phash[y] = *pb;
+						plast[y] = xb;
+
+						/* insertion sort */
+						for (z = y; z != 0; z--) {
+							if (phash[z - 1]->compare(*phash[z], true, false) > 0) {
+								HPSAT_SWAP(phash[z - 1], phash[z]);
+								HPSAT_SWAP(plast[z - 1], plast[z]);
+								/* update "x" if needed */
+								if (x == z - 1)
+									x = z;
+							} else {
+								break;
+							}
+						}
+						break;
+					} else if (plast[index] != 0) {
+						hpsat_merge_xor(*plast[index], *xb, false);
+					} else {
+						plast[index] = xb;
+						break;
+					}
+				}
+			}
+
+		}
+	}
+
+	if (any)
+		goto repeat_0;
 
 	hpsat_free(&andmap);
 
@@ -1326,9 +1427,7 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 		pa = xa->last();
 		pb = xa->first();
 
-		if (pb->isOne() && pb->next() == pa) {
-		} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
-		} else {
+		if (pb->isOne() == false || pb->next() != pa) {
 			/* put the easy targets first */
 			for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 				xn = xa->next();
@@ -1336,11 +1435,8 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 				pa = xa->last();
 				pb = xa->first();
 
-				if (pb->isOne() && pb->next() == pa) {
+				if (pb->isOne() && pb->next() == pa)
 					xa->remove(xhead)->insert_head(xhead);
-				} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
-					xa->remove(xhead)->insert_head(xhead);
-				}
 			}
 		}
 
@@ -1355,16 +1451,6 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 				bm->toggleInverted();
 				any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
 			}
-			if (pderiv) {
-				TAILQ_CONCAT(&temp, pderiv, entry);
-				TAILQ_CONCAT(pderiv, &temp, entry);
-			}
-			delete xa;
-			continue;
-		} else if (xa->isXorConst() && !xa->isZero() && !xa->isOne()) {
-			bm = xa->remove(xhead)->first()->first();
-			any |= hpsat_substitute(xhead, &temp, bm->maxVar(), *bm);
-
 			if (pderiv) {
 				TAILQ_CONCAT(&temp, pderiv, entry);
 				TAILQ_CONCAT(pderiv, &temp, entry);
