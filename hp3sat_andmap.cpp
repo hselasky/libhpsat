@@ -308,6 +308,7 @@ hpsat_sort_xor_value(ANDMAP_HEAD_t *phead)
 			if (ba->isInverted()) {
 				while (ba->nvar != 0)
 					pp[count++] = new ANDMAP(ba->pvar[--(ba->nvar)], false);
+				pa->sort();
 			} else {
 				while (ba->nvar > 1)
 					pp[count++] = new ANDMAP(ba->pvar[--(ba->nvar)], false);
