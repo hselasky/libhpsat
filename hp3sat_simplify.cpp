@@ -1178,8 +1178,6 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 	XORMAP *xb;
 	XORMAP *xn;
 
-	BITMAP *bm;
-
 	ANDMAP *pa;
 	ANDMAP *pb;
 	ANDMAP *pc;
@@ -1371,35 +1369,20 @@ repeat_0:
 
 	any = false;
 
-	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-		xn = xa->next();
-		pa = xa->first();
-		if (pa == 0 || pa->isOne() == false || xa->isXorConst())
-			continue;
-		pb = pa->next();
-		if (pb == 0)
-			continue;
-		ANDMAP t[3];
-
-		t[0] = *pb;
-		for (pb = pb->next(); pb; pb = pb->next()) {
-			t[1] = *pb;
-			t[2] = ANDMAP(true);
-			hpsat_simplify_split(t[0], t[1], t[2]);
-			t[0] = t[2];
-			if (t[0].isOne())
-				break;
-		}
-		if (t[0].isOne())
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
+		if (xa->isXorConst())
 			continue;
 
-		xa->remove(xhead);
-		for (bm = t[0].first(); bm; bm = bm->next()) {
-			bm->toggleInverted();
-			(new XORMAP(*bm))->insert_head(xhead);
-			any = true;
+		/* check if any bits must be constant */
+		for (hpsat_var_t v = HPSAT_VAR_MAX; (v = xa->maxVar(v)) != HPSAT_VAR_MIN; ) {
+			if (XORMAP(*xa).expand(v, false).isOne()) {
+				(new XORMAP(v, true))->insert_head(xhead);
+				any = true;
+			} else if (XORMAP(*xa).expand(v, true).isOne()) {
+				(new XORMAP(v, false))->insert_head(xhead);
+				any = true;
+			}
 		}
-		delete xa;
 	}
 
 	/* get the sorting back to normal */
