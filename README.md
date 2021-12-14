@@ -13,7 +13,7 @@ make all install
 </pre>
 
 ## How to build the hpsolve application
-</pre>
+<pre>
 make -C apps/hpsolve all install
 </pre>
 
