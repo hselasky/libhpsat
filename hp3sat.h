@@ -932,6 +932,10 @@ extern size_t hpsat_find_shortest_path(XORMAP_HEAD_t *, hpsat_var_t, hpsat_var_t
 
 extern void hpsat_compress(XORMAP_HEAD_t *, ANDMAP_HEAD_t *);
 
+/* digraph functions */
+
+extern void hpsat_print_digraph(std::ostream &, XORMAP_HEAD_t *);
+
 /* logic builder classes and functions */
 
 class variable_t {

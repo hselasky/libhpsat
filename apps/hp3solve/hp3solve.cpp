@@ -38,7 +38,7 @@ static size_t nsol;
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-D] [-s] [-h]\n");
+	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-D] [-s] [-H] [-h]\n");
 }
 
 static bool
@@ -64,10 +64,11 @@ main(int argc, char **argv)
 	int demux = 0;
 	int count = 0;
 	int strip = 0;
+	int digraph = 0;
 
 	signal(SIGPIPE, SIG_IGN);
 
-	while ((c = getopt(argc, argv, "cdDhs")) != -1) {
+	while ((c = getopt(argc, argv, "cdDhHs")) != -1) {
 		switch (c) {
 		case 'c':
 			count = 1;
@@ -80,6 +81,9 @@ main(int argc, char **argv)
 			break;
 		case 's':
 			strip = 1;
+			break;
+		case 'H':
+			digraph = 1;
 			break;
 		default:
 			usage();
@@ -123,6 +127,11 @@ main(int argc, char **argv)
 		/* remove not-needed variables */
 		hpsat_solve_strip(&ahead, &xhead, vl, vm);
 		vm = vl;
+	}
+
+	if (digraph) {
+		hpsat_print_digraph(std::cout, &xhead);
+		goto skip;
 	}
 
 	if (count == 0) {

@@ -19,6 +19,7 @@ SRCS= \
 	hp3sat_cnf.cpp \
 	hp3sat_compress.cpp \
 	hp3sat_demux.cpp \
+	hp3sat_digraph.cpp \
 	hp3sat_explore_path.cpp \
 	hp3sat_logic_builder.cpp \
 	hp3sat_solve.cpp \
