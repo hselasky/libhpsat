@@ -18,9 +18,16 @@ make -C apps/hpsolve all install
 </pre>
 
 ## Examples
+# Example 1
 <pre>
 hpsat_generate -f 1 -b 8 -V | hp3solve -sH | \
 	grep -v ^c | dot -Tsvg > hpsat_generate_1_8.svg
+</pre>
+
+# Example 2
+<pre>
+hpsat_generate -f 1 -b 4 -V | hp3solve -sc | \
+	hpsat_generate -f 1 -b 4 -p
 </pre>
 
 --HPS
