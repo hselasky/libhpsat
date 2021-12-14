@@ -18,14 +18,14 @@ make -C apps/hp3solve all install
 </pre>
 
 ## Examples
-# Example 1
+### Example 1
 <IMG SRC="https://raw.githubusercontent.com/hselasky/libhpsat/main/www/hpsat_generate_1_4.svg"></IMG>
 <pre>
 hpsat_generate -f 1 -b 4 -V | hp3solve -sH | \
 	grep -v ^c | dot -Tsvg > hpsat_generate_1_4.svg
 </pre>
 
-# Example 2
+### Example 2
 <pre>
 hpsat_generate -f 1 -b 4 -V | hp3solve -sc | \
 	hpsat_generate -f 1 -b 4 -p
