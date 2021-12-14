@@ -12,9 +12,9 @@ optimised to handle large amounts of variables.
 make all install
 </pre>
 
-## How to build the hpsolve application
+## How to build the hp3solve application
 <pre>
-make -C apps/hpsolve all install
+make -C apps/hp3solve all install
 </pre>
 
 ## Examples
