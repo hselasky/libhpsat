@@ -77,16 +77,21 @@ solve:
 	uint8_t taken[(vm + 7) / 8];
 	memset(taken, 0, sizeof(taken));
 	size_t ntaken = 0;
+	size_t stats[vm];
+	bool isClean = false;
 
 	while (ntaken != vm) {
 		hpsat_var_t v,w;
-		size_t stats[vm];
-		memset(stats, 0, sizeof(stats));
 
-		for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xa->next()) {
-			  v = HPSAT_VAR_MAX;
-			  while ((v = xa->maxVar(v)) != HPSAT_VAR_MIN)
-				stats[v]++;
+		if (!isClean) {
+			memset(stats, 0, sizeof(stats));
+
+			for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xa->next()) {
+				v = HPSAT_VAR_MAX;
+				while ((v = xa->maxVar(v)) != HPSAT_VAR_MIN)
+					stats[v]++;
+			}
+			isClean = true;
 		}
 
 		for (v = w = 0; w != vm; w++) {
@@ -113,8 +118,14 @@ solve:
 
 		for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
 			xn = xa->next();
-			if (xa->contains(v))
+			if (xa->contains(v)) {
 				xa->remove(xhead)->insert_tail(&ahead);
+
+				/* update statistics */
+				w = HPSAT_VAR_MAX;
+				while ((w = xa->maxVar(w)) != HPSAT_VAR_MIN)
+					stats[w]--;
+			}
 		}
 
 		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xa->next()) {
@@ -146,6 +157,8 @@ solve:
 
 			while (hpsat_simplify_xormap(xhead))
 				;
+
+			isClean = false;
 		}
 
 		for (xa = TAILQ_FIRST(&ahead); xa; xa = xa->next()) {
