@@ -1172,6 +1172,7 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 
 	ANDMAP **phash;
 	XORMAP **plast;
+	uint8_t *pclean;
 	size_t nhash;
 
 	XORMAP *xa;
@@ -1231,6 +1232,9 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 	plast = new XORMAP * [nhash];
 	memset(plast, 0, sizeof(plast[0]) * nhash);
 
+	pclean = new uint8_t [nhash];
+	memset(pclean, 0, sizeof(pclean[0]) * nhash);
+
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
 
@@ -1261,7 +1265,7 @@ repeat_0:
 
 	for (x = nhash; x--; ) {
 		xa = plast[x];
-		if (xa == 0)
+		if (xa == 0 || pclean[x])
 			continue;
 	repeat_1:
 		for (pa = xa->last()->prev(); pa; pa = pa->prev()) {
@@ -1281,9 +1285,10 @@ repeat_0:
 
 	for (x = 0; x != nhash; x++) {
 		xa = plast[x];
-		if (xa == 0)
+		if (xa == 0 || pclean[x])
 			continue;
 		pa = xa->last();
+		pclean[x] = 1;
 
 		for (y = x + 1; y != nhash; y++) {
 			xb = plast[y];
@@ -1314,6 +1319,8 @@ repeat_0:
 
 			pb = xb->last();
 
+			pclean[y] = 0;
+
 			/* check if the last ANDMAP changed */
 			if (pb == 0 || hpsat_compare_value(&pb, phash + y) != 0) {
 				plast[y] = 0;
@@ -1340,6 +1347,7 @@ repeat_0:
 							if (hpsat_compare_value(phash + z - 1, phash + z) > 0) {
 								HPSAT_SWAP(phash[z - 1], phash[z]);
 								HPSAT_SWAP(plast[z - 1], plast[z]);
+								HPSAT_SWAP(pclean[z - 1], pclean[z]);
 								/* update "x" if needed */
 								if (x == z - 1)
 									x = z;
@@ -1365,6 +1373,7 @@ repeat_0:
 	hpsat_free(&andmap);
 
 	delete [] plast;
+	delete [] pclean;
 	delete [] phash;
 
 	any = false;
@@ -1399,6 +1408,7 @@ err_one:
 	hpsat_free(&andmap);
 
 	delete [] plast;
+	delete [] pclean;
 	delete [] phash;
 
 	return (false);
