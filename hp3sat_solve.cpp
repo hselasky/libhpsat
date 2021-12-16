@@ -111,46 +111,46 @@ solve:
 		printf("c PROGRESS v%zd\n", v);
 
 		XORMAP_HEAD_t ahead;
+		XORMAP_HEAD_t bhead[2];
 		XORMAP_HEAD_t thead;
 
 		TAILQ_INIT(&ahead);
+		TAILQ_INIT(&bhead[0]);
+		TAILQ_INIT(&bhead[1]);
 		TAILQ_INIT(&thead);
 
 		for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
 			xn = xa->next();
 			if (xa->contains(v)) {
-				xa->remove(xhead)->insert_tail(&ahead);
-
 				/* update statistics */
 				w = HPSAT_VAR_MAX;
 				while ((w = xa->maxVar(w)) != HPSAT_VAR_MIN)
 					stats[w]--;
+
+				/* expand variable */
+				(new XORMAP(*xa))->insert_tail(&bhead[0]).expand(v, false);
+				(new XORMAP(*xa))->insert_tail(&bhead[1]).expand(v, true);
+				xa->remove(xhead)->insert_tail(&ahead);
 			}
 		}
 
-		for (xa = TAILQ_FIRST(&ahead); xa != 0; xa = xa->next()) {
-			XORMAP temp_a[2] = { *xa, *xa };
-			temp_a[0].expand(v, false);
-			temp_a[1].expand(v, true);
+		while (hpsat_simplify_xormap(&bhead[0]))
+			;
+		while (hpsat_simplify_xormap(&bhead[1]))
+			;
 
-			for (xb = xa->next(); xb != 0; xb = xb->next()) {
-				XORMAP temp_b[2] = { *xb, *xb };
-				temp_b[0].expand(v, false);
-				temp_b[1].expand(v, true);
-
-				xn = new XORMAP(temp_a[0] & temp_b[1]);
-				if (xn->defactor().isZero())
-					delete xn;
-				else
-					xn->insert_tail(&thead);
-
-				xn = new XORMAP(temp_a[1] & temp_b[0]);
+		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
+			for (xb = TAILQ_FIRST(&bhead[1]); xb != 0; xb = xb->next()) {
+				xn = new XORMAP(*xa & *xb);
 				if (xn->defactor().isZero())
 					delete xn;
 				else
 					xn->insert_tail(&thead);
 			}
 		}
+
+		hpsat_free(&bhead[0]);
+		hpsat_free(&bhead[1]);
 
 		if (TAILQ_FIRST(&thead)) {
 			TAILQ_CONCAT(xhead, &thead, entry);
