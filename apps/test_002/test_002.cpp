@@ -90,8 +90,8 @@ square_equation(XORMAP_HEAD_t *peq)
 		mv = 4 * MAXVAR;
 
 	while ((xa = TAILQ_FIRST(peq))) {
-		(new XORMAP(*xa))->shiftVar(MAXVAR * 4 + mv).insert_tail(&temp);
-		xa->remove(peq)->shiftVar(MAXVAR * 4).insert_tail(&temp);
+		(new XORMAP(*xa))->addVar(MAXVAR * 4 + mv).insert_tail(&temp);
+		xa->remove(peq)->addVar(MAXVAR * 4).insert_tail(&temp);
 	}
 
 	for (hpsat_var_t v = 0; v != 2 * MAXVAR; v++) {
