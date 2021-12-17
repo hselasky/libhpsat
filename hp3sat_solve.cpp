@@ -148,6 +148,50 @@ solve:
 		while (hpsat_simplify_xormap(&bhead[1]))
 			;
 
+		for (xa = TAILQ_FIRST(&ahead); xa; xa = xa->next()) {
+			XORMAP temp[2] = { *xa, *xa };
+
+			temp[0].expand(v, false);
+			temp[1].expand(v, true);
+
+			/* check if variable "v" is assigned */
+			if ((temp[0] ^ temp[1]).isOne()) {
+				xa->remove(&ahead);
+
+				printf("c ASSIGNED\n");
+
+				for (xb = TAILQ_FIRST(&ahead); xb; xb = xb->next()) {
+					XORMAP xored;
+
+					hpsat_sort_xor_no_accumulate(&xb->head);
+
+					for (ANDMAP *pb = xb->first(); pb; pb = pb->next()) {
+						ANDMAP t[3] = { ANDMAP(v, false), *pb, ANDMAP(true) };
+
+						hpsat_simplify_split(t[0], t[1], t[2]);
+
+						if (t[0].isOne() == false)
+							continue;
+						for (ANDMAP *pc = xa->first(); pc; pc = pc->next())
+							(new ANDMAP(t[1] & *pc))->insert_tail(&xored.head);
+					}
+
+					hpsat_sort_xor_no_accumulate(&xored.head);
+
+					if (xored.isZero())
+						continue;
+
+					TAILQ_CONCAT(&xb->head, &xored.head, entry);
+					xb->sort();
+				}
+
+				TAILQ_CONCAT(&thead, &ahead, entry);
+				xa->insert_tail(&ahead);
+				goto skip_conflict;
+			}
+		}
+
+		/* compute the variable conflict */
 		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
 			for (xb = TAILQ_FIRST(&bhead[1]); xb != 0; xb = xb->next()) {
 				xn = new XORMAP(*xa & *xb);
@@ -158,6 +202,7 @@ solve:
 			}
 		}
 
+	skip_conflict:
 		hpsat_free(&bhead[0]);
 		hpsat_free(&bhead[1]);
 
@@ -171,21 +216,6 @@ solve:
 				;
 
 			isClean = false;
-		}
-
-		for (xa = TAILQ_FIRST(&ahead); xa; xa = xa->next()) {
-			XORMAP temp[2] = { *xa, *xa };
-
-			temp[0].expand(v, false);
-			temp[1].expand(v, true);
-
-			/* check if variable "v" is assigned */
-			if ((temp[0] ^ temp[1]).isOne()) {
-				xa->remove(&ahead);
-				hpsat_free(&ahead);
-				xa->insert_tail(&ahead);
-				break;
-			}
 		}
 
 		(new XORMAP(false))->insert_tail(&ahead);
