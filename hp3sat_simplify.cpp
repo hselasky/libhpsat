@@ -1260,6 +1260,7 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 		}
 	}
 
+	printf("c NHASH=%zd\n", nhash);
 repeat_0:
 	any = false;
 
@@ -1280,8 +1281,6 @@ repeat_0:
 	}
 
 	/* insertion step */
-
-	printf("c NHASH=%zd\n", nhash);
 
 	for (x = 0; x != nhash; x++) {
 		xa = plast[x];
