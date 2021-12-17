@@ -155,6 +155,71 @@ done:
 	return (did_sort);
 }
 
+static int
+hpsat_compare_var(const void *a, const void *b)
+{
+	return ((XORMAP * const *)a)[0][0].compare_var(((XORMAP * const *)b)[0][0]);
+}
+
+bool
+hpsat_squash_or(XORMAP_HEAD_t *phead)
+{
+	XORMAP *pa;
+	XORMAP **pp;
+	size_t count = 0;
+	bool did_squash = false;
+
+	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next())
+		count++;
+
+	if (count == 0)
+		return (false);
+	pp = new XORMAP * [count];
+
+	count = 0;
+	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next())
+		pp[count++] = pa;
+
+	for (size_t x = 1; x != count; x++) {
+		if (pp[x - 1]->compare_var(*pp[x]) > 0) {
+			mergesort(pp, count, sizeof(pp[0]), &hpsat_compare_var);
+			break;
+		}
+	}
+
+	TAILQ_INIT(phead);
+
+	for (size_t x = 1; x != count; x++) {
+		if (pp[x - 1]->isZero()) {
+			delete pp[x - 1];
+		} else if (pp[x - 1]->compare_var(*pp[x]) == 0) {
+			*pp[x] |= *pp[x - 1];
+			pp[x]->defactor();
+			delete pp[x - 1];
+			did_squash = true;
+		} else {
+			pp[x - 1]->insert_tail(phead);
+		}
+	}
+
+	if (pp[count - 1]->isZero())
+		delete pp[count - 1];
+	else
+		pp[count - 1]->insert_tail(phead);
+
+	delete [] pp;
+
+	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
+		if (pa->isOne()) {
+			pa->remove(phead);
+			hpsat_free(phead);
+			pa->insert_tail(phead);
+			break;
+		}
+	}
+	return (did_squash);
+}
+
 XORMAP &
 XORMAP :: substitute(hpsat_var_t var, const BITMAP &expr)
 {

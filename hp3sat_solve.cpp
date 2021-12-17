@@ -71,6 +71,9 @@ solve:
 
 	TAILQ_CONCAT(xhead, &temp, entry);
 
+	if (hpsat_squash_or(xhead))
+		printf("c SQUASHED\n");
+
 	while (hpsat_simplify_xormap(xhead))
 		;
 
@@ -134,6 +137,12 @@ solve:
 			}
 		}
 
+		if (hpsat_squash_or(&bhead[0]))
+			printf("c SQUASHED\n");
+
+		if (hpsat_squash_or(&bhead[1]))
+			printf("c SQUASHED\n");
+
 		while (hpsat_simplify_xormap(&bhead[0]))
 			;
 		while (hpsat_simplify_xormap(&bhead[1]))
@@ -154,6 +163,9 @@ solve:
 
 		if (TAILQ_FIRST(&thead)) {
 			TAILQ_CONCAT(xhead, &thead, entry);
+
+			if (hpsat_squash_or(xhead))
+				printf("c SQUASHED\n");
 
 			while (hpsat_simplify_xormap(xhead))
 				;
