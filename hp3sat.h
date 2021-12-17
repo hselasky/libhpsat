@@ -822,6 +822,23 @@ public:
 	ANDMAP *last(void) const {
 		return (TAILQ_LAST(&head, ANDMAP_HEAD));
 	};
+	int compare_var(const XORMAP & other) {
+		hpsat_var_t av = HPSAT_VAR_MAX;
+		hpsat_var_t bv = HPSAT_VAR_MAX;
+
+		while (1) {
+			av = maxVar(av);
+			bv = other.maxVar(bv);
+
+			if (av == HPSAT_VAR_MIN || bv == HPSAT_VAR_MIN)
+				return ((av != HPSAT_VAR_MIN) - (bv != HPSAT_VAR_MIN));
+
+			if (av > bv)
+				return (1);
+			else if (av < bv)
+				return (-1);
+		}
+	};
 	int compare(const XORMAP & other, bool compare_data = true, bool compare_count = true) const {
 		if (compare_count) {
 			const size_t na = count();
