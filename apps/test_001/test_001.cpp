@@ -25,20 +25,15 @@
 
 #include "hp3sat.h"
 
-#define	LMAX 8
+#define	LMAX 18
 #define	MAX (1 << LMAX)
 
 static bool
 function(uint32_t x, uint8_t bit)
 {
-#if 0
-	x = (x & 15) * (x >> 4);
-	x ^= 3 * 5;
+	const uint32_t mask = (1U << (LMAX / 3)) - 1U;
+	x = ((x & mask) * (x & mask)) ^ (x >> (LMAX / 3));
 	return ((x >> bit) & 1);
-#else
-	return (x % 3) & 1;
-	return ((x * x) & MAX) ? 1 : 0;
-#endif
 }
 
 int main()
@@ -49,7 +44,7 @@ int main()
 
 	hpsat_var_t nvar = LMAX;
 
-	for (uint8_t bit = 0; bit != 2 * LMAX; bit++) {
+	for (uint8_t bit = 0; bit != LMAX; bit++) {
 		BITMAP *pm = new BITMAP();
 
 		pm->addVarSequence(0, LMAX);
@@ -61,38 +56,39 @@ int main()
 				pm->clear(x);
 		}
 
-		BITMAP_HEAD_t hh;
-
-		TAILQ_INIT(&hh);
-
-		pm->sort().insert_tail(&hh);
-
-		hpsat_demux(&hh, &nvar);
-
-		TAILQ_CONCAT(&head, &hh, entry);
+		pm->sort().insert_tail(&head);
 	}
-
-	do {
-		hpsat_simplify_or(&head);
-	} while (hpsat_squash_or(&head));
 
 	size_t num = 0;
 	for (BITMAP *pn = TAILQ_FIRST(&head); pn; pn = pn->next()) {
 		pn->print(); printf(" # EQ %zd\n", num++);
 	}
 
+	hpsat_var_t ovar = nvar;
+
+	nvar = (nvar + nvar * nvar) / 2;
+
 	uint8_t solution[nvar];
 	memset(solution, 0, sizeof(solution));
 
 	XORMAP_HEAD_t ahead;
 	TAILQ_INIT(&ahead);
-
 	hpsat_bitmap_to_xormap(&head, &ahead);
+	hpsat_sort_or(&ahead);
+
+	/* add helper variables */
+	for (hpsat_var_t x = 0, z = 0; x != ovar; x++) {
+		for (hpsat_var_t y = x + 1; y != ovar; y++, z++) {
+			(new XORMAP((XORMAP(x, false) & XORMAP(y, false)) ^
+			    XORMAP(ovar + z, false)))->insert_tail(&ahead);
+		}
+	}
 
 	XORMAP_HEAD_t shead;
 	TAILQ_INIT(&shead);
 
 	hpsat_solve(&ahead, &shead, nvar);
+	hpsat_solve_strip(&ahead, &shead, LMAX, nvar);
 
 	if (hpsat_solve_first(&shead, solution))
 		printf("SOLVED\n");
