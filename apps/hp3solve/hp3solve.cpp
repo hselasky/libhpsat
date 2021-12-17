@@ -38,7 +38,7 @@ static size_t nsol;
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-D] [-s] [-H] [-h]\n");
+	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-D] [-s] [-H] [-h] [-V]\n");
 }
 
 static bool
@@ -65,10 +65,11 @@ main(int argc, char **argv)
 	int count = 0;
 	int strip = 0;
 	int digraph = 0;
+	int helpervar = 0;
 
 	signal(SIGPIPE, SIG_IGN);
 
-	while ((c = getopt(argc, argv, "cdDhHs")) != -1) {
+	while ((c = getopt(argc, argv, "cdDhHsV")) != -1) {
 		switch (c) {
 		case 'c':
 			count = 1;
@@ -84,6 +85,9 @@ main(int argc, char **argv)
 			break;
 		case 'H':
 			digraph = 1;
+			break;
+		case 'V':
+			helpervar = 1;
 			break;
 		default:
 			usage();
@@ -114,6 +118,15 @@ main(int argc, char **argv)
 
 	XORMAP_HEAD_t xhead;
 	TAILQ_INIT(&xhead);
+
+	if (helpervar) {
+		for (hpsat_var_t x = 0; x != vl; x++) {
+			for (hpsat_var_t y = x + 1; y != vl; y++) {
+				(new XORMAP((XORMAP(x, false) & XORMAP(y, false)) ^
+				    XORMAP(vm++, false)))->insert_tail(&ahead);
+			}
+		}
+	}
 
 	uint8_t *psol = new uint8_t [vm];
 	memset(psol, 0, sizeof(psol[0]) * vm);
