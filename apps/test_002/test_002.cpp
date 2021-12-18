@@ -105,7 +105,7 @@ square_equation(XORMAP_HEAD_t *peq)
 	mv = 2 * mv + 4 * MAXVAR;
 
 	hpsat_demux(&temp, &mv);
-	hpsat_solve(&temp, &solution, mv);
+	hpsat_solve(&temp, &solution, &mv);
 	hpsat_solve_strip(&temp, &solution, 4 * MAXVAR, mv);
 	hpsat_underiv(peq, &solution);
 	TAILQ_CONCAT(peq, &temp, entry);
