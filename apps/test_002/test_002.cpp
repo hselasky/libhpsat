@@ -65,8 +65,7 @@ generate_function(XORMAP_HEAD_t &eq)
 	hpsat_bitmap_to_xormap(peq, &temp);
 	hpsat_logic_builder_finish();
 
-	hpsat_demux(&temp, &vm);
-	hpsat_solve(&temp, &solution, vm);
+	hpsat_solve(&temp, &solution, &vm);
 	hpsat_solve_strip(&temp, &solution, 4 * MAXVAR, vm);
 	hpsat_underiv(&eq, &solution);
 	TAILQ_CONCAT(&eq, &temp, entry);

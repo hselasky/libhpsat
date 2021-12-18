@@ -26,8 +26,9 @@
 #include "hp3sat.h"
 
 bool
-hpsat_solve(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t vm)
+hpsat_solve(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t *pvmax)
 {
+	const hpsat_var_t vm = *pvmax;
 	XORMAP_HEAD_t temp;
 
 	XORMAP *xa;

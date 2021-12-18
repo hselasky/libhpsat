@@ -68,9 +68,6 @@ int main()
 
 	nvar = (nvar + nvar * nvar) / 2;
 
-	uint8_t solution[nvar];
-	memset(solution, 0, sizeof(solution));
-
 	XORMAP_HEAD_t ahead;
 	TAILQ_INIT(&ahead);
 	hpsat_bitmap_to_xormap(&head, &ahead);
@@ -87,8 +84,11 @@ int main()
 	XORMAP_HEAD_t shead;
 	TAILQ_INIT(&shead);
 
-	hpsat_solve(&ahead, &shead, nvar);
+	hpsat_solve(&ahead, &shead, &nvar);
 	hpsat_solve_strip(&ahead, &shead, LMAX, nvar);
+
+	uint8_t solution[nvar];
+	memset(solution, 0, sizeof(solution));
 
 	if (hpsat_solve_first(&shead, solution))
 		printf("SOLVED\n");

@@ -128,13 +128,15 @@ main(int argc, char **argv)
 		}
 	}
 
-	uint8_t *psol = new uint8_t [vm];
-	memset(psol, 0, sizeof(psol[0]) * vm);
+	uint8_t *psol = 0;
 
-	if (hpsat_solve(&ahead, &xhead, vm)) {
+	if (hpsat_solve(&ahead, &xhead, &vm)) {
 		printf("UNSATISFIABLE\n");
 		goto skip;
 	}
+
+	psol = new uint8_t [vm];
+	memset(psol, 0, sizeof(psol[0]) * vm);
 
 	if (strip) {
 		/* remove not-needed variables */
