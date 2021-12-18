@@ -243,3 +243,47 @@ hpsat_demux_ored(XORMAP_HEAD_t *xhead, hpsat_var_t *pvar)
 	}
 	TAILQ_CONCAT(xhead, &temp, entry);
 }
+
+bool
+hpsat_demux_helper(XORMAP_HEAD_t *xhead, hpsat_var_t *pvar)
+{
+	ANDMAP_HEAD_t helper;
+	XORMAP *xa;
+	XORMAP *xn;
+	ANDMAP *pa;
+	ANDMAP *pb;
+	bool any = false;
+
+	TAILQ_INIT(&helper);
+
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+
+		if (xa->isZero()) {
+			delete xa->remove(xhead);
+			continue;
+		} else if (xa->isXorConst())
+			continue;
+
+		for (ANDMAP *pa = xa->first(); pa; pa = pa->next()) {
+			if (pa->count() <= 2)
+				continue;
+			for (hpsat_var_t v = HPSAT_VAR_MAX; (v = pa->maxVar(v)) != HPSAT_VAR_MIN; ) {
+				(new ANDMAP(v, false))->insert_tail(&helper);
+			}
+			any = true;
+		}
+	}
+
+	hpsat_sort_or(&helper);
+
+	for (pa = TAILQ_FIRST(&helper); pa; pa = pa->next()) {
+		for (pb = pa->next(); pb; pb = pb->next()) {
+			(new XORMAP(XORMAP((*pvar)++, false) ^
+			    (XORMAP(*pa & *pb))))->insert_tail(xhead);
+		}
+	}
+
+	hpsat_free(&helper);
+	return (any);
+}
