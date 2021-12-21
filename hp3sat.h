@@ -913,6 +913,7 @@ extern void hpsat_build_multi_adder_logic(XORMAP_HEAD_t *, size_t);
 typedef bool (hpsat_solve_callback_t)(void *, uint8_t *);
 
 extern bool hpsat_solve(XORMAP_HEAD_t *, XORMAP_HEAD_t *, hpsat_var_t *);
+extern void hpsat_solve_analyze(XORMAP_HEAD_t *, hpsat_var_t *);
 extern void hpsat_solve_strip(XORMAP_HEAD_t *, XORMAP_HEAD_t *, hpsat_var_t, hpsat_var_t);
 extern bool hpsat_solve_first(XORMAP_HEAD_t *, uint8_t *);
 extern size_t hpsat_solve_count(XORMAP_HEAD_t *, uint8_t *);

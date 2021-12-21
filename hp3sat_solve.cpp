@@ -433,3 +433,75 @@ hpsat_underiv(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv)
 		xa = xn;
 	}
 }
+
+struct hpsat_solve {
+	hpsat_var_t vmax;
+	uint8_t *pused;
+	uint8_t *psol;
+};
+
+static bool
+hpsat_solve_analyze_cb(void *arg, uint8_t *psol)
+{
+	struct hpsat_solve *psolve = (struct hpsat_solve *)arg;
+	size_t z = 0;
+
+	for (hpsat_var_t v = 0; v != psolve->vmax; v++) {
+		for (hpsat_var_t w = v; w != psolve->vmax; w++) {
+			psolve->pused[z++] |= 1U << (psol[v] + 2 * psol[w]);
+		}
+	}
+	return (true);
+}
+
+void
+hpsat_solve_analyze(XORMAP_HEAD_t *xhead, hpsat_var_t *pvmax)
+{
+	struct hpsat_solve solve;
+	XORMAP_HEAD_t deriv;
+	size_t sz;
+
+	TAILQ_INIT(&deriv);
+
+	if (hpsat_solve(xhead, &deriv, pvmax)) {
+		hpsat_free(&deriv);
+		return;
+	}
+
+	sz = (*pvmax * *pvmax + *pvmax) / 2;
+
+	solve.vmax = *pvmax;
+	solve.pused = new uint8_t [sz];
+	solve.psol = new uint8_t [*pvmax];
+	memset(solve.pused, 0, sz);
+	memset(solve.psol, 0, *pvmax);
+
+	hpsat_solve_callback(TAILQ_FIRST(&deriv),
+	    solve.psol, hpsat_solve_analyze_cb, &solve);
+
+	sz = 0;
+
+	for (hpsat_var_t v = 0; v != solve.vmax; v++) {
+		for (hpsat_var_t w = v; w != solve.vmax; w++, sz++) {
+			for (uint8_t x = 0; x != 4; x++) {
+				if (v == w && x != 0 && x != 3)
+					continue;
+				if (~(solve.pused[sz] >> x) & 1)
+					(new XORMAP(ANDMAP(v, (x & 1) ? false : true) &
+						    ANDMAP(w, (x & 2) ? false : true)))->insert_tail(xhead);
+			}
+		}
+	}
+	delete [] solve.psol;
+	delete [] solve.pused;
+
+	hpsat_squash_or(xhead);
+
+	while (hpsat_simplify_xormap(xhead))
+		;
+
+	hpsat_underiv(xhead, &deriv);
+
+	while (hpsat_simplify_xormap(xhead))
+		;
+}

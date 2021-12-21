@@ -38,7 +38,7 @@ static size_t nsol;
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-d] [-D] [-s] [-H] [-h] [-V]\n");
+	fprintf(stderr, "Usage: cat xxx.cnf | hpsolve [-c] [-a] [-d] [-D] [-s] [-H] [-h] [-V]\n");
 }
 
 static bool
@@ -66,11 +66,15 @@ main(int argc, char **argv)
 	int strip = 0;
 	int digraph = 0;
 	int helpervar = 0;
+	int analyze = 0;
 
 	signal(SIGPIPE, SIG_IGN);
 
-	while ((c = getopt(argc, argv, "cdDhHsV")) != -1) {
+	while ((c = getopt(argc, argv, "acdDhHsV")) != -1) {
 		switch (c) {
+		case 'a':
+			analyze = 1;
+			break;
 		case 'c':
 			count = 1;
 			break;
@@ -127,6 +131,9 @@ main(int argc, char **argv)
 			}
 		}
 	}
+
+	if (analyze)
+		hpsat_solve_analyze(&ahead, &vm);
 
 	uint8_t *psol = 0;
 
