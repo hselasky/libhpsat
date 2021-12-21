@@ -1257,6 +1257,9 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 
 	printf("c NHASH=%zd\n", nhash);
 
+repeat_0:
+	any = false;
+
 	for (x = nhash; x--; ) {
 		xa = plast[x];
 		if (xa == 0)
@@ -1266,70 +1269,81 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 			if (pa->isOne())
 				continue;
 
-			for (BITMAP *ba = pa->first(); ba; ba = ba->next()) {
-				for (BITMAP *bb = ba; bb; bb = bb->next()) {
-					ANDMAP *ptest = new ANDMAP(ANDMAP(*ba) & ANDMAP(*bb));
+			size_t mask = (1UL << pa->count()) - 1UL;
+			if (mask == 0)
+				continue;
 
-					index = hpsat_lookup_value(phash, nhash, &ptest);
-					delete ptest;
-
-					if (index == -1 || index == (ssize_t)x)
-						continue;
-
-					xb = plast[index];
-					if (xb == 0)
-						continue;
-
-					ANDMAP t[3] = { *xb->last(), *pa, ANDMAP(true) };
-					hpsat_simplify_split(t[0], t[1], t[2]);
-
-					if (t[0].isOne() == false)
-						continue;
-
-					for (pb = xb->first(); pb; pb = pb->next())
-						(new ANDMAP(*pb & t[1]))->insert_tail(&xa->head);
-
-					hpsat_sort_xor_no_accumulate(&xa->head);
-
-					plast[x] = 0;
-
-					while (1) {
-						if (xa->isZero()) {
-							delete xa->remove(xhead);
-							break;
-						} else if (xa->isOne()) {
-							goto err_one;
-						}
-
-						pa = xa->last();
-
-						index = hpsat_lookup_value(phash, nhash, &pa);
-						if (index == -1) {
-							/* the entry doesn't exist, so we need to re-hash */
-							*phash[x] = *pa;
-							plast[x] = xa;
-
-							/* insertion sort */
-							for (z = x; z != 0; z--) {
-								if (hpsat_compare_value(phash + z - 1, phash + z) > 0) {
-									HPSAT_SWAP(phash[z - 1], phash[z]);
-									HPSAT_SWAP(plast[z - 1], plast[z]);
-								} else {
-									break;
-								}
-							}
-							if (z == x)
-								goto repeat_1;
-							break;
-						} else if (plast[index] != 0) {
-							hpsat_merge_xor(*plast[index], *xa, false);
-						} else {
-							plast[index] = xa;
-							break;
-						}
-					}
-					goto next_1;
+			for (size_t m = 1; m != mask; m++) {
+				ANDMAP *ptest = new ANDMAP(true);
+				size_t mm = m;
+				for (BITMAP *ba = pa->first(); ba; ba = ba->next()) {
+					if (mm & 1)
+						(new BITMAP(*ba))->insert_tail(&ptest->head);
+					mm /= 2;
 				}
+
+				index = hpsat_lookup_value(phash, nhash, &ptest);
+				delete ptest;
+
+				if (index == -1 || index == (ssize_t)x)
+					continue;
+
+				xb = plast[index];
+				if (xb == 0)
+					continue;
+
+				ANDMAP t[3] = { *xb->last(), *pa, ANDMAP(true) };
+				hpsat_simplify_split(t[0], t[1], t[2]);
+
+				if (t[0].isOne() == false)
+					continue;
+
+				for (pb = xb->first(); pb; pb = pb->next())
+					(new ANDMAP(*pb & t[1]))->insert_tail(&xa->head);
+
+				hpsat_sort_xor_no_accumulate(&xa->head);
+
+				plast[x] = 0;
+
+				while (1) {
+					if (xa->isZero()) {
+						delete xa->remove(xhead);
+						break;
+					} else if (xa->isOne()) {
+						goto err_one;
+					}
+
+					pa = xa->last();
+
+					index = hpsat_lookup_value(phash, nhash, &pa);
+					if (index == -1) {
+						/* the entry doesn't exist, so we need to re-hash */
+						*phash[x] = *pa;
+						plast[x] = xa;
+						any = true;
+
+						/* insertion sort */
+						for (z = x; z != 0; z--) {
+							if (hpsat_compare_value(phash + z - 1, phash + z) > 0) {
+								HPSAT_SWAP(phash[z - 1], phash[z]);
+								HPSAT_SWAP(plast[z - 1], plast[z]);
+							} else {
+								break;
+							}
+						}
+						if (z == x)
+							goto repeat_1;
+						break;
+					} else if (plast[index] != 0) {
+						hpsat_merge_xor(*plast[index], *xa, false);
+					} else {
+						plast[index] = xa;
+						if (index == (ssize_t)x)
+							goto repeat_1;
+						break;
+					}
+				}
+				goto next_1;
 			}
 			index = hpsat_lookup_value(phash, nhash, &pa);
 			if (index != -1 && index != (ssize_t)x && plast[index] != 0) {
@@ -1339,6 +1353,9 @@ hpsat_simplify_xormap(XORMAP_HEAD_t *xhead)
 		}
 	next_1:;
 	}
+
+	if (any)
+		goto repeat_0;
 
 	hpsat_free(&andmap);
 
