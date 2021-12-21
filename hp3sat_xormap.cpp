@@ -418,7 +418,7 @@ repeat:
 		goto repeat;
 }
 
-void
+bool
 hpsat_find_ored(XORMAP_HEAD_t *phead)
 {
 	XORMAP_HEAD_t head;
@@ -427,6 +427,8 @@ hpsat_find_ored(XORMAP_HEAD_t *phead)
 	XORMAP *xb;
 	XORMAP *xn;
 	ANDMAP *pa;
+
+	bool any = false;
 
 	TAILQ_INIT(&head);
 
@@ -441,9 +443,10 @@ hpsat_find_ored(XORMAP_HEAD_t *phead)
 		for (pa = xa->first(); pa; pa = pa->next()) {
 			xb = new XORMAP(*pa);
 
-			if (((*xa ^ *xb) & *xb).defactor().isZero())
+			if (((*xa ^ *xb) & *xb).defactor().isZero()) {
+				any = true;
 				xb->insert_tail(&head);
-			else
+			} else
 				delete xb;
 		}
 
@@ -455,6 +458,7 @@ hpsat_find_ored(XORMAP_HEAD_t *phead)
 
 		TAILQ_CONCAT(phead, &head, entry);
 	}
+	return (any);
 }
 
 void
