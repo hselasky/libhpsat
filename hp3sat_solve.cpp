@@ -29,48 +29,16 @@ bool
 hpsat_solve(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t *pvmax)
 {
 	const hpsat_var_t vm = *pvmax;
-	XORMAP_HEAD_t temp;
 
 	XORMAP *xa;
 	XORMAP *xb;
 	XORMAP *xn;
 
-	bool do_loop;
-
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
 		if (xa->isXorConst())
 			continue;
-		if (xa->count() > 1 || xa->isOne() || hpsat_numvar(&xa->head) > 2)
-			goto solve;
+		*xa = xa->toBitMap().toXorMap();
 	}
-
-	do {
-		hpsat_sort_or(xhead);
-
-		hpsat_simplify_all(xhead, pderiv, vm);
-
-		hpsat_underiv(xhead, pderiv);
-
-		do_loop = hpsat_simplify_deriv(xhead, pderiv);
-
-		hpsat_underiv(xhead, pderiv);
-	} while (do_loop);
-
-solve:
-	TAILQ_INIT(&temp);
-
-	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
-		xn = xa->next();
-
-		if (xa->isXorConst()) {
-			xa->remove(xhead)->insert_tail(&temp);
-		} else {
-			(new XORMAP(xa->toBitMap().toXorMap()))->insert_tail(&temp);
-			delete xa->remove(xhead);
-		}
-	}
-
-	TAILQ_CONCAT(xhead, &temp, entry);
 
 	if (hpsat_squash_or(xhead))
 		printf("c SQUASHED\n");
