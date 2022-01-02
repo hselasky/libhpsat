@@ -56,6 +56,31 @@ hpsat_solve(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t *pvmax)
 		hpsat_var_t v,w;
 
 		if (!isClean) {
+			XORMAP_HEAD_t ahead;
+			TAILQ_INIT(&ahead);
+
+			for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
+				xn = xa->next();
+
+				if (xa->isXorConst()) {
+					v = xa->maxVar();
+					if (v > -1) {
+						(new XORMAP(v, false))->insert_tail(&ahead);
+						xa->remove(xhead)->insert_tail(&ahead);
+						(new XORMAP(false))->insert_tail(&ahead);
+
+						taken[v / 8] |= (1 << (v % 8));
+						ntaken++;
+					}
+				}
+			}
+
+			TAILQ_CONCAT(&ahead, pderiv, entry);
+			TAILQ_CONCAT(pderiv, &ahead, entry);
+
+			if (ntaken == vm)
+				break;
+
 			memset(stats, 0, sizeof(stats));
 
 			for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xa->next()) {
@@ -80,7 +105,7 @@ hpsat_solve(XORMAP_HEAD_t *xhead, XORMAP_HEAD_t *pderiv, hpsat_var_t *pvmax)
 		taken[v / 8] |= (1 << (v % 8));
 		ntaken++;
 
-		printf("c PROGRESS v%zd\n", v);
+		printf("c PROGRESS v%zd (%zd / %zd)\n", v, ntaken, vm);
 
 		XORMAP_HEAD_t ahead;
 		XORMAP_HEAD_t bhead[2];
