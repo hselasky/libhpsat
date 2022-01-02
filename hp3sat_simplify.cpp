@@ -1261,10 +1261,10 @@ repeat_0:
 	any = false;
 
 	for (x = nhash; x--; ) {
+	repeat_1:
 		xa = plast[x];
 		if (xa == 0)
 			continue;
-	repeat_1:
 		for (pa = xa->last(); pa; pa = pa->prev()) {
 			if (pa->isOne())
 				continue;
@@ -1331,27 +1331,23 @@ repeat_0:
 								break;
 							}
 						}
-						if (z == x)
-							goto repeat_1;
 						break;
 					} else if (plast[index] != 0) {
 						hpsat_merge_xor(*plast[index], *xa, false);
 					} else {
 						plast[index] = xa;
-						if (index == (ssize_t)x)
-							goto repeat_1;
 						break;
 					}
 				}
-				goto next_1;
+				goto repeat_1;
 			}
+
 			index = hpsat_lookup_value(phash, nhash, &pa);
 			if (index != -1 && index != (ssize_t)x && plast[index] != 0) {
 				hpsat_merge_xor(*plast[index], *xa, false);
 				goto repeat_1;
 			}
 		}
-	next_1:;
 	}
 
 	if (any)
