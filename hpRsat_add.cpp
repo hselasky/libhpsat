@@ -87,10 +87,11 @@ hprsat_sort_or(ADD_HEAD_t *phead)
 	bool did_sort;
 
 	for (pa = TAILQ_FIRST(phead); pa; pa = pn) {
-		const uint32_t value = pa->sort().getConst();
+		const double value = pa->sort().getConst();
 		pn = pa->next();
 
-		if (value == 0) {
+		if (hprsat_is_nan(value) == false &&
+		    value == 0) {
 			delete pa->remove(phead);
 		} else if (!pa->isVariable()) {
 			pa->remove(phead);
