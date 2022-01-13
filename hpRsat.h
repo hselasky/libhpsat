@@ -371,6 +371,8 @@ public:
 		pn->insert_tail(&head);
 		return (*this);
 	};
+	ADD & doGCD();
+
 	bool isVariable() const {
 		for (MUL *pa = first(); pa; pa = pa->next()) {
 			if (pa->isVariable())

@@ -250,3 +250,44 @@ hprsat_try_sqrt(double &value)
 	}
 	return (false);
 }
+
+/* greatest common divisor, Euclid equation */
+static double
+hprsat_gcd(double a, double b)
+{
+	double an;
+	double bn;
+
+	if (a < 0.0)
+		a = -a;
+	if (b < 0.0)
+		b = -b;
+
+	while (b != 0.0) {
+		an = b;
+		bn = fmod(a, b);
+		a = an;
+		b = bn;
+	}
+	return (a);
+}
+
+ADD &
+ADD :: doGCD()
+{
+	MUL *pa = first();
+	if (pa == 0)
+		return (*this);
+
+	double factor = pa->factor_lin;
+
+	while ((pa = pa->next()) != 0)
+		factor = hprsat_gcd(factor, pa->factor_lin);
+
+	if (factor != 0.0 && factor != 1.0) {
+		for (pa = first(); pa; pa = pa->next()) {
+			pa->factor_lin /= factor;
+		}
+	}
+	return (*this);
+}
