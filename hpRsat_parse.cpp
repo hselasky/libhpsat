@@ -80,7 +80,7 @@ hprsat_skip_space(std::string &line, size_t &offset)
 }
 
 static bool
-hprsat_parse_add(std::string &line, size_t &offset, ADD &output);
+hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool = false);
 
 static bool
 hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
@@ -180,7 +180,7 @@ hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
 }
 
 static bool
-hprsat_parse_add(std::string &line, size_t &offset, ADD &output)
+hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool parentSign)
 {
 	hprsat_skip_space(line, offset);
 
@@ -193,7 +193,19 @@ hprsat_parse_add(std::string &line, size_t &offset, ADD &output)
 	}
 
 	while (true) {
-		MUL temp(sign ? -1.0 : 1.0);
+		if (line[offset] == '+') {
+			sign = false;
+			offset++;
+			hprsat_skip_space(line, offset);
+		} else if (line[offset] == '-') {
+			sign = true;
+			offset++;
+			hprsat_skip_space(line, offset);
+		} else if (line[offset] == '\0') {
+			return (haveParens);
+		}
+
+		MUL temp((sign ^ parentSign) ? -1.0 : 1.0);
 
 		if (hprsat_parse_mul(line, offset, temp))
 			return (true);
@@ -207,19 +219,6 @@ hprsat_parse_add(std::string &line, size_t &offset, ADD &output)
 				return (false);
 			}
 		}
-		if (line[offset] == '+') {
-			sign = false;
-			offset++;
-			hprsat_skip_space(line, offset);
-		} else if (line[offset] == '-') {
-			sign = true;
-			offset++;
-			hprsat_skip_space(line, offset);
-		} else if (line[offset] == '\0') {
-			return (haveParens);
-		} else {
-			return (true);
-		}
 	}
 }
 
@@ -230,6 +229,7 @@ hprsat_parse(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *pmax, bool verbo
 	ssize_t nexpr = 0;
 	size_t lineno = 0;
 	size_t offset;
+	bool sign = false;
 
 	while (getline(in, line)) {
 		lineno++;
@@ -246,15 +246,34 @@ hprsat_parse(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *pmax, bool verbo
 
 		offset = 0;
 
-		if (hprsat_parse_add(line, offset, temp)) {
-			if (verbose) {
-				std::cerr << "# Error parsing line " << lineno << ": '" <<
-				    line << "' at offset " << offset << "\n";
+		while (1) {
+			if (hprsat_parse_add(line, offset, temp, sign)) {
+				if (verbose) {
+					std::cerr << "# Error parsing line " << lineno << ": '" <<
+					    line << "' at offset " << offset << "\n";
+				}
+				hprsat_free(phead);
+				return (EINVAL);
 			}
-			hprsat_free(phead);
-			return (EINVAL);
+			if (line[offset] == '+') {
+				offset++;
+				sign = false;
+				hprsat_skip_space(line, offset);
+			} else if (line[offset] == '-') {
+				offset++;
+				sign = true;
+				hprsat_skip_space(line, offset);
+			} else if (line[offset] == '\0') {
+				break;
+			} else {
+				if (verbose) {
+					std::cerr << "# Error parsing line " << lineno << ": '" <<
+					    line << "' at offset " << offset << "\n";
+				}
+				hprsat_free(phead);
+				return (EINVAL);
+			}
 		}
-
 		temp.sort().dup()->insert_tail(phead);
 		nexpr++;
 	}
