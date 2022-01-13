@@ -67,7 +67,8 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
 			for (xb = TAILQ_FIRST(&bhead[1]); xb != 0; xb = xb->next()) {
 				xn = new ADD(xa[0] * xb[0]);
-				if (xn->doGCD().getConst() == 0)
+				const double test = xn->doGCD().getConst();
+				if (hprsat_is_nan(test) == false && test == 0.0)
 					delete xn;
 				else
 					xn->insert_tail(&thead);
@@ -103,7 +104,8 @@ hprsat_solve_callback(ADD *xm, uint8_t *psol, hprsat_solve_callback_t *cb, void 
 
 	for (psol[v] = 0; psol[v] != 2; psol[v]++) {
 		for (xa = xm->next(); xa->first(); xa = xa->next()) {
-			if (ADD(*xa).expand_all(psol).getConst() != 0)
+			const double test = ADD(*xa).expand_all(psol).getConst();
+			if (hprsat_is_nan(test) || test != 0.0)
 				goto next;
 		}
 		if (hprsat_solve_callback(xa->next(), psol, cb, arg) == false)
@@ -139,16 +141,20 @@ hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol)
 		printf("# VAR %zd\n", v);
 		for (xa = xa->next(); xa->first(); xa = xa->next()) {
 			printf("# "); xa->print(); printf("\n");
-			while (psol[v] != 2 &&
-			       ADD(*xa).expand_all(psol).getConst() != 0)
-				psol[v]++; 
+			while (psol[v] != 2) {
+				const double test = ADD(*xa).expand_all(psol).getConst();
+				if (hprsat_is_nan(test) == false && test == 0.0)
+					break;
+				psol[v]++;
+			}
 		}
 	}
 
 	/* double check solution */
 	for (ADD *xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
 		for (xa = xa->next(); xa->first(); xa = xa->next()) {
-			if (ADD(*xa).expand_all(psol).getConst() != 0)
+			double test = ADD(*xa).expand_all(psol).getConst();
+			if (hprsat_is_nan(test) || test != 0.0)
 				retval = false;
 		}
 	}
