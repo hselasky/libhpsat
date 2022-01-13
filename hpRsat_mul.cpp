@@ -385,13 +385,13 @@ MUL :: print(std::ostream &out) const
 
 	if (hprsat_is_nan(value)) {
 		if (factor_lin != 1.0) {
-			out << factor_lin;
+			out << std::fixed << factor_lin;
 			if (factor_sqrt != 1.0 || vfirst() || afirst())
 				out << "*";
 		}
 		if (factor_sqrt != 1.0) {
 			out << "sqrt(";
-			out << factor_sqrt;
+			out << std::fixed << factor_sqrt;
 			out << ")";
 			if (vfirst() || afirst())
 				out << "*";
