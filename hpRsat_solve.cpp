@@ -131,24 +131,46 @@ hprsat_solve_count(ADD_HEAD_t *xhead, uint8_t *psol)
 }
 
 bool
-hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol)
+hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
 {
 	bool retval = true;
 
 	/* compute the derivated XORs in the right order */
 	for (ADD *xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
+		double score[2] = {};
 		const hprsat_var_t v = xa->first()->vfirst()->var;
 		printf("# VAR %zd\n", v);
+		if (useProbability) {
+			for (uint8_t x = 0; x != 2; x++) {
+				psol[v] = x;
+
+				for (ADD *xb = xa->next(); xb->first(); xb = xb->next()) {
+					const double test = ADD(*xb).expand_all(psol).getConst();
+					if (hprsat_is_nan(test) == false) {
+						score[x] += fabs(test);
+					}
+				}
+			}
+			psol[v] = (score[0] > score[1]);
+		}
 		for (xa = xa->next(); xa->first(); xa = xa->next()) {
-			printf("# "); xa->print(); printf("\n");
+			printf("# "); xa->print();
 			while (psol[v] != 2) {
 				const double test = ADD(*xa).expand_all(psol).getConst();
 				if (hprsat_is_nan(test) == false && test == 0.0)
 					break;
+				if (useProbability) {
+					printf(" ERROR=%f/%f", score[0], score[1]);
+					break;
+				}
 				psol[v]++;
 			}
+			printf("\n");
 		}
 	}
+
+	if (useProbability)
+		return (retval);
 
 	/* double check solution */
 	for (ADD *xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {

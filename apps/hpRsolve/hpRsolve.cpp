@@ -37,7 +37,7 @@ static size_t nsol;
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: cat xxx.txt | hpRsolve [-c] [-v] [-H] [-h]\n");
+	fprintf(stderr, "Usage: cat xxx.txt | hpRsolve [-c] [-P] [-v] [-H] [-h]\n");
 }
 
 static bool
@@ -63,10 +63,11 @@ main(int argc, char **argv)
 	bool verbose = false;
 	bool count = false;
 	bool digraph = false;
+	bool probability = false;
 
 	signal(SIGPIPE, SIG_IGN);
 
-	while ((c = getopt(argc, argv, "chHv")) != -1) {
+	while ((c = getopt(argc, argv, "chHPv")) != -1) {
 		switch (c) {
 		case 'c':
 			count = true;
@@ -76,6 +77,9 @@ main(int argc, char **argv)
 			break;
 		case 'v':
 			verbose = true;
+			break;
+		case 'P':
+			probability = true;
 			break;
 		default:
 			usage();
@@ -107,7 +111,7 @@ main(int argc, char **argv)
 	if (digraph) {
 		hprsat_print_digraph(std::cout, &xhead);
 	} else if (count == 0) {
-		if (hprsat_solve_first(&xhead, psol) == false) {
+		if (hprsat_solve_first(&xhead, psol, probability) == false) {
 			printf("# UNSATISFIABLE\n");
 			goto skip;
 		}
