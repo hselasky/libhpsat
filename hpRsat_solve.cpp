@@ -34,6 +34,9 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 	ADD *xb;
 	ADD *xn;
 
+	for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xa->next())
+		xa->doGCD();
+
 	for (hprsat_var_t v = 0; v != vm; v++) {
 
 		printf("# PROGRESS v%zd of %zd\n", v, vm);
@@ -64,7 +67,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
 			for (xb = TAILQ_FIRST(&bhead[1]); xb != 0; xb = xb->next()) {
 				xn = new ADD(xa[0] * xb[0]);
-				if (xn->getConst() == 0)
+				if (xn->doGCD().getConst() == 0)
 					delete xn;
 				else
 					xn->insert_tail(&thead);
