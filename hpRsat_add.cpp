@@ -218,7 +218,7 @@ ADD :: operator *(const ADD &other) const
 		for (MUL *pb = other.first(); pb; pb = pb->next())
 			(new MUL(pa[0] * pb[0]))->insert_tail(&temp.head);
 	}
-	return (temp);
+	return (temp.sort());
 }
 
 double hprsat_nan;
