@@ -54,8 +54,8 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 			xn = xa->next();
 			if (xa->contains(v)) {
 				/* Expand variable. */
-				(new ADD(*xa))->insert_tail(&bhead[0]).expand(v, false).sort();
-				(new ADD(*xa))->insert_tail(&bhead[1]).expand(v, true).sort();
+				(new ADD(*xa))->insert_tail(&bhead[0]).expand(v, false);
+				(new ADD(*xa))->insert_tail(&bhead[1]).expand(v, true);
 				xa->remove(xhead)->insert_tail(&ahead);
 			}
 		}
