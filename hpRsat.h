@@ -218,6 +218,9 @@ public:
 	MUL *dup(void) const {
 		return (new MUL(*this));
 	};
+	bool isNegative() const {
+		return (factor_lin < 0.0);
+	};
 	MUL & negate() {
 		factor_lin = -factor_lin;
 		return (*this);
