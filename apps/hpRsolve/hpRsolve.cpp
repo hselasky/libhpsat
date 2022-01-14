@@ -100,7 +100,7 @@ main(int argc, char **argv)
 		return (1);
 	}
 
-	if (hprsat_solve(&ahead, &xhead, &vm)) {
+	if (hprsat_solve(&ahead, &xhead, &vm, probability)) {
 		printf("# UNSATISFIABLE\n");
 		goto skip;
 	}

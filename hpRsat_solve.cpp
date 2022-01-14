@@ -26,7 +26,7 @@
 #include "hpRsat.h"
 
 bool
-hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
+hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool useProbability)
 {
 	const hprsat_var_t vm = *pvmax;
 
@@ -34,8 +34,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 	ADD *xb;
 	ADD *xn;
 
-	for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xa->next())
-		xa->doGCD();
+	hprsat_simplify_add(xhead, useProbability);
 
 	for (hprsat_var_t v = 0; v != vm; v++) {
 
@@ -60,8 +59,8 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 			}
 		}
 
-		hprsat_sort_or(&bhead[0]);
-		hprsat_sort_or(&bhead[1]);
+		hprsat_simplify_add(&bhead[0]);
+		hprsat_simplify_add(&bhead[1]);
 
 		/* Compute the variable conflict. */
 		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
@@ -69,6 +68,8 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 				xn = new ADD(xa[0] * xb[0]);
 				if (xn->isNonZeroVariable())
 					xn->insert_tail(&thead);
+				else
+					delete xn;
 			}
 		}
 
@@ -77,7 +78,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax)
 
 		if (TAILQ_FIRST(&thead)) {
 			TAILQ_CONCAT(xhead, &thead, entry);
-			hprsat_sort_or(xhead);
+			hprsat_simplify_add(xhead, useProbability);
 		}
 
 		(new ADD(0.0))->insert_tail(&ahead);
