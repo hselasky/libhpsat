@@ -195,14 +195,14 @@ hprsat_sort_mul(ADD_HEAD_t *phead, ADD &defactor, double &factor)
 			delete pp[x];
 			x++;
 			if (x == count)
-				break;
+				goto done;
 		} else {
 			pp[x - 1]->insert_tail(phead);
 		}
 	}
 
 	pp[count - 1]->insert_tail(phead);
-
+done:
 	delete [] pp;
 
 	return (did_sort);
