@@ -88,6 +88,7 @@ static bool
 hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
 {
 	bool haveParens = (line[offset] == '(');
+	bool any = false;
 
 	if (haveParens) {
 		offset++;
@@ -107,12 +108,14 @@ hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
 			MUL var(1.0, hprsat_read_size_value(line, offset));
 			hprsat_skip_space(line, offset);
 			output *= var;
+			any = true;
 		} else if ((line[offset] >= '0' && line[offset] <= '9') ||
 			   (line[offset] == '-' &&
 			    line[offset+1] >= '0' && line[offset+1] <= '9')) {
 			MUL var(hprsat_read_double_value(line, offset));
 			hprsat_skip_space(line, offset);
 			output *= var;
+			any = true;
 		} else if (line[offset] == 's' &&
 			   line[offset+1] == 'q' &&
 			   line[offset+2] == 'r' &&
@@ -126,6 +129,7 @@ hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
 				return (true);
 			temp.dup()->insert_tail(&var.ahead);
 			output *= var;
+			any = true;
 		} else if (line[offset] == 'c' &&
 			   line[offset+1] == 'o' &&
 			   line[offset+2] == 's' &&
@@ -149,6 +153,7 @@ hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
 			temp.dup()->insert_tail(&var.ahead);
 
 			output *= var;
+			any = true;
 		} else if (line[offset] == 's' &&
 			   line[offset+1] == 'i' &&
 			   line[offset+2] == 'n' &&
@@ -172,11 +177,13 @@ hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
 			temp.dup()->insert_tail(&var.ahead);
 
 			output *= var;
+			any = true;
 		} else if (line[offset] == '*') {
 			offset++;
 			hprsat_skip_space(line, offset);
+			any = false;
 		} else {
-			return (haveParens);
+			return (haveParens || any == false);
 		}
 	}
 }
