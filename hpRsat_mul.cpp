@@ -380,6 +380,15 @@ MUL :: count() const
 	return (retval);
 }
 
+static void
+hprsat_out_value(std::ostream &out, double value)
+{
+	if (floor(value) == value && fabs(value) < 1000.0)
+		out << value;
+	else
+		out << std::fixed << value;
+}
+
 void
 MUL :: print(std::ostream &out) const
 {
@@ -387,13 +396,17 @@ MUL :: print(std::ostream &out) const
 
 	if (hprsat_is_nan(value)) {
 		if (factor_lin != 1.0) {
-			out << std::fixed << factor_lin;
-			if (factor_sqrt != 1.0 || vfirst() || afirst())
-				out << "*";
+			if (factor_lin != -1.0) {
+				hprsat_out_value(out, factor_lin);
+				if (factor_sqrt != 1.0 || vfirst() || afirst())
+					out << "*";
+			} else {
+				out << "-";
+			}
 		}
 		if (factor_sqrt != 1.0) {
 			out << "sqrt(";
-			out << std::fixed << factor_sqrt;
+			hprsat_out_value(out, factor_sqrt);
 			out << ")";
 			if (vfirst() || afirst())
 				out << "*";
@@ -411,7 +424,7 @@ MUL :: print(std::ostream &out) const
 				out << "*";
 		}
 	} else {
-		out << value;
+		hprsat_out_value(out, value);
 	}
 }
 
