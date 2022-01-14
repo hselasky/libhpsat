@@ -241,7 +241,7 @@ MUL :: isVariable() const
 }
 
 double
-MUL :: getConst() const
+MUL :: getConst(bool doSqrt) const
 {
 	double value_lin = factor_lin;
 	double value_sqrt = factor_sqrt;
@@ -257,7 +257,7 @@ MUL :: getConst() const
 	}
 
 	for (ADD *pa = TAILQ_FIRST(&ahead); pa; pa = pa->next()) {
-		const double temp = pa->getConst();
+		const double temp = pa->getConst(doSqrt);
 		if (hprsat_is_nan(temp)) {
 			undefined = true;
 			continue;
@@ -271,7 +271,7 @@ MUL :: getConst() const
 
 	if (undefined)
 		return (hprsat_nan);
-	else if (hprsat_try_sqrt(value_sqrt))
+	else if (hprsat_try_sqrt(value_sqrt, doSqrt))
 		return (value_sqrt * value_lin);
 	else
 		return (hprsat_nan);

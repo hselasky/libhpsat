@@ -236,20 +236,26 @@ hprsat_is_nan(double value)
 }
 
 bool
-hprsat_try_sqrt(double &value)
+hprsat_try_sqrt(double &value, bool doSqrt)
 {
-	if (isnan(value) || value < 0.0 ||
-	    floor(value) != value)
+	if (isnan(value)) {
 		return (false);
-	/* Check fast path first. */
-	if (value == 0.0 || value == 1.0)
+	} else if (doSqrt) {
+		value = sqrt(fabs(value));
 		return (true);
-	double test = sqrt(value);
-	if ((test * test) == value) {
-		value = test;
+	} else if (value == 0.0 || value == 1.0) {
 		return (true);
+	} else if (value < 0.0 || floor(value) != value) {
+		return (false);
+	} else {
+		double test = sqrt(value);
+		if ((test * test) == value) {
+			value = test;
+			return (true);
+		} else {
+			return (false);
+		}
 	}
-	return (false);
 }
 
 /* greatest common divisor, Euclid equation */

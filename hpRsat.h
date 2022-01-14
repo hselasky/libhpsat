@@ -60,7 +60,7 @@ class ADD;
 typedef TAILQ_CLASS_HEAD(ADD_HEAD, ADD) ADD_HEAD_t;
 typedef TAILQ_CLASS_ENTRY(ADD) ADD_ENTRY_t;
 
-extern bool hprsat_try_sqrt(double &);
+extern bool hprsat_try_sqrt(double &, bool = false);
 extern bool hprsat_is_nan(double);
 
 class VAR {
@@ -227,7 +227,7 @@ public:
 	MUL & addVar(hprsat_var_t delta);
 	MUL & mulVar(hprsat_var_t factor);
 	bool isVariable() const;
-	double getConst() const;
+	double getConst(bool = false) const;
 	bool contains(hprsat_var_t var) const;
 	MUL & operator =(const MUL &other);
 	MUL & operator *=(const MUL &other);
@@ -380,10 +380,10 @@ public:
 		}
 		return (false);
 	};
-	double getConst() const {
+	double getConst(bool doSqrt = false) const {
 		double value = 0.0;
 		for (MUL *pa = first(); pa; pa = pa->next()) {
-			const double temp = pa->getConst();
+			const double temp = pa->getConst(doSqrt);
 			if (hprsat_is_nan(temp)) {
 				return (temp);
 			} else {

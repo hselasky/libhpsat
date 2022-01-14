@@ -145,7 +145,7 @@ hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
 				psol[v] = x;
 
 				for (ADD *xb = xa->next(); xb->first(); xb = xb->next()) {
-					const double test = ADD(*xb).expand_all(psol).getConst();
+					const double test = ADD(*xb).expand_all(psol).getConst(true);
 					if (hprsat_is_nan(test) == false) {
 						score[x] += fabs(test);
 					}
