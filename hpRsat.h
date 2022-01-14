@@ -690,6 +690,10 @@ extern void hprsat_fft_mul(const CADD *, const CADD *, CADD *, uint8_t);
 
 extern int hprsat_parse(std::istream &, ADD_HEAD_t *, hprsat_var_t *, bool = false);
 
+/* simplify functions */
+
+extern bool hprsat_simplify_add(ADD_HEAD_t *, bool = false);
+
 /* trigometry functions */
 
 extern ADD hprsat_sin_32(uint32_t angle, uint32_t mask = -1U, hprsat_var_t var = 0);

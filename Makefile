@@ -18,6 +18,7 @@ SRCS= \
 	hpRsat_fft.cpp \
 	hpRsat_mul.cpp \
 	hpRsat_parse.cpp \
+	hpRsat_simplify.cpp \
 	hpRsat_solve.cpp \
 	hpRsat_trig.cpp \
 	hpRsat_var.cpp \
