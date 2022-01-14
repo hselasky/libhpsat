@@ -23,6 +23,8 @@
  * SUCH DAMAGE.
  */
 
+#include <math.h>
+
 #include "hpRsat.h"
 
 bool

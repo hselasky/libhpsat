@@ -23,6 +23,8 @@
  * SUCH DAMAGE.
  */
 
+#include <math.h>
+
 #include "hpRsat.h"
 
 static size_t
