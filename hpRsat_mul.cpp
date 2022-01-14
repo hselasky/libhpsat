@@ -383,10 +383,11 @@ MUL :: count() const
 static void
 hprsat_out_value(std::ostream &out, double value)
 {
-	if (floor(value) == value && fabs(value) < 1000.0)
+	if (floor(value) == value && fabs(value) < 10000.0) {
 		out << value;
-	else
-		out << std::fixed << value;
+	} else {
+		out << std::fixed << value << std::defaultfloat;
+	}
 }
 
 void
