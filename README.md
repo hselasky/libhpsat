@@ -65,4 +65,15 @@ cat << EOF | hpRsolve -v -P
 EOF
 </pre>
 
+### Example 6
+Multiplying circuit (v0,v1,v2) * (v3,v4,v5) = 15
+<pre>
+cat << EOF | hpRsolve -v
+v0*v3 - 1
+v0*v4 + v1*v3 - 1
+v0*v5 + v1*v4 + v2*v3 - 1
+v1*v5 + v2*v4 - 1
+v2*v5 - 0
+</pre>
+
 --HPS
