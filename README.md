@@ -74,6 +74,7 @@ v0*v4 + v1*v3 - 1
 v0*v5 + v1*v4 + v2*v3 - 1
 v1*v5 + v2*v4 - 1
 v2*v5 - 0
+EOF
 </pre>
 
 --HPS
