@@ -231,7 +231,15 @@ public:
 	bool contains(hprsat_var_t var) const;
 	MUL & operator =(const MUL &other);
 	MUL & operator *=(const MUL &other);
+	MUL & operator /=(const MUL &other);
 	MUL & zero();
+	MUL & doGCD(const MUL &);
+
+	MUL operator /(const MUL &other) const {
+		MUL temp(*this);
+		temp /= other;
+		return (temp);
+	};
 
 	MUL operator *(const MUL &other) const {
 		MUL temp(*this);

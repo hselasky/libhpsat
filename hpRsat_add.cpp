@@ -258,27 +258,6 @@ hprsat_try_sqrt(double &value, bool doSqrt)
 	}
 }
 
-/* greatest common divisor, Euclid equation */
-static double
-hprsat_gcd(double a, double b)
-{
-	double an;
-	double bn;
-
-	if (a < 0.0)
-		a = -a;
-	if (b < 0.0)
-		b = -b;
-
-	while (b != 0.0) {
-		an = b;
-		bn = fmod(a, b);
-		a = an;
-		b = bn;
-	}
-	return (a);
-}
-
 ADD &
 ADD :: doGCD()
 {
@@ -286,15 +265,31 @@ ADD :: doGCD()
 	if (pa == 0)
 		return (*this);
 
-	double factor = pa->factor_lin;
+	MUL factor(*pa);
 
-	while ((pa = pa->next()) != 0)
-		factor = hprsat_gcd(factor, pa->factor_lin);
-
-	if (factor != 0.0 && factor != 1.0) {
-		for (pa = first(); pa; pa = pa->next()) {
-			pa->factor_lin /= factor;
-		}
+	while ((pa = pa->next()) != 0) {
+		double value = pa->getConst();
+		if (hprsat_is_nan(value) == false && value == 0.0)
+			return (*this);
+		factor.doGCD(*pa);
 	}
+
+	/* Remove all variables. */
+	hprsat_free(&factor.vhead);
+
+	ADD *aa;
+	ADD *an;
+
+	for (aa = factor.afirst(); aa; aa = an) {
+		an = aa->next();
+
+		double value = aa->getConst(true);
+		if (hprsat_is_nan(value))
+			delete aa->remove(&factor.ahead);
+	}
+
+	for (pa = first(); pa; pa = pa->next())
+		*pa /= factor;
+
 	return (*this);
 }

@@ -23,6 +23,8 @@
  * SUCH DAMAGE.
  */
 
+#include <math.h>
+
 #include "hpRsat.h"
 
 hprsat_var_t
@@ -507,5 +509,137 @@ MUL :: zero()
 	factor_sqrt = 1.0;
 	hprsat_free(&vhead);
 	hprsat_free(&ahead);
+	return (*this);
+}
+
+/* greatest common divisor, Euclid equation */
+
+static double
+hprsat_gcd(double a, double b)
+{
+	double an;
+	double bn;
+
+	if (a < 0.0)
+		a = -a;
+	if (b < 0.0)
+		b = -b;
+
+	while (b != 0.0) {
+		an = b;
+		bn = fmod(a, b);
+		a = an;
+		b = bn;
+	}
+	return (a);
+}
+
+MUL &
+MUL :: doGCD(const MUL &other)
+{
+	VAR *va;
+	VAR *vb;
+	VAR *vn;
+
+	ADD *aa;
+	ADD *ab;
+	ADD *an;
+
+	factor_lin = hprsat_gcd(factor_lin, other.factor_lin);
+	factor_sqrt = hprsat_gcd(factor_sqrt, other.factor_sqrt);
+
+	va = vfirst();
+	vb = other.vfirst();
+
+	while (va && vb) {
+		int ret = va->compare(*vb);
+		if (ret < 0) {
+			vn = va->next();
+			delete va->remove(&vhead);
+			va = vn;
+		} else if (ret == 0) {
+			va = va->next();
+			vb = vb->next();
+		} else {
+			vb = vb->next();
+		}
+	}
+
+	while (va) {
+		vn = va->next();
+		delete va->remove(&vhead);
+		va = vn;
+	}
+
+	aa = afirst();
+	ab = other.afirst();
+
+	while (aa && ab) {
+		int ret = aa->compare(*ab);
+		if (ret < 0) {
+			an = aa->next();
+			delete aa->remove(&ahead);
+			aa = an;
+		} else if (ret == 0) {
+			aa = aa->next();
+			ab = ab->next();
+		} else {
+			ab = ab->next();
+		}
+	}
+
+	while (aa) {
+		an = aa->next();
+		delete aa->remove(&ahead);
+		aa = an;
+	}
+	return (*this);
+}
+
+MUL &
+MUL :: operator /=(const MUL &other)
+{
+	VAR *va;
+	VAR *vb;
+	VAR *vn;
+
+	ADD *aa;
+	ADD *ab;
+	ADD *an;
+
+	factor_lin /= other.factor_lin;
+	factor_sqrt /= other.factor_sqrt;
+
+	va = vfirst();
+	vb = other.vfirst();
+
+	while (va && vb) {
+		int ret = va->compare(*vb);
+		if (ret == 0) {
+			vn = va->next();
+			delete va->remove(&vhead);
+			va = vn;
+		} else if (ret > 0) {
+			vb = vb->next();
+		} else {
+			va = va->next();
+		}
+	}
+
+	aa = afirst();
+	ab = other.afirst();
+
+	while (aa && ab) {
+		int ret = aa->compare(*ab);
+		if (ret == 0) {
+			an = aa->next();
+			delete aa->remove(&ahead);
+			aa = an;
+		} else if (ret > 0) {
+			ab = ab->next();
+		} else {
+			aa = aa->next();
+		}
+	}
 	return (*this);
 }
