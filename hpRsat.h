@@ -561,6 +561,20 @@ public:
 			retval++;
 		return (retval);
 	};
+	bool isNonZeroVariable() const {
+		const double value = getConst();
+		if (hprsat_is_nan(value) || value != 0.0)
+			return (true);
+		else
+			return (false);
+	};
+	bool isNonZeroConst() const {
+		const double value = getConst();
+		if (hprsat_is_nan(value) || value == 0.0)
+			return (false);
+		else
+			return (true);
+	};
 	ADD & expand(hprsat_var_t var, bool value) {
 		for (MUL *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
 			pa->expand(var, value);
