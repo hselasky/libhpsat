@@ -680,6 +680,10 @@ extern void hprsat_underiv(ADD_HEAD_t *, ADD_HEAD_t *);
 
 extern void hprsat_print_digraph(std::ostream &, ADD_HEAD_t *);
 
+/* elevate functions */
+
+extern bool hprsat_elevate_add(ADD_HEAD_t *, bool = false);
+
 /* fast Fourier transforms */
 
 extern void hprsat_fft_fwd(CADD *, uint8_t, bool = true);

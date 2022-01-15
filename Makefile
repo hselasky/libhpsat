@@ -19,6 +19,7 @@ CFLAGS+=	-I${PREFIX}/include
 SRCS= \
 	hpRsat_add.cpp \
 	hpRsat_digraph.cpp \
+	hpRsat_elevate.cpp \
 	hpRsat_fft.cpp \
 	hpRsat_mul.cpp \
 	hpRsat_parse.cpp \
