@@ -30,43 +30,50 @@
 static int
 hprsat_compare_value(const void *a, const void *b)
 {
-	return ((MUL * const *)a)[0][0].compare(((MUL * const *)b)[0][0]);
-}
-
-static int
-hprsat_compare_value_no_factor(const void *a, const void *b)
-{
-	return ((MUL * const *)a)[0][0].compare(((MUL * const *)b)[0][0], false);
+	return ((MUL * const *)a)[0][0].compare(((MUL * const *)b)[0][0], HPRSAT_CMP_NFA);
 }
 
 static ssize_t
-hprsat_lookup_value_no_factor(MUL **base, size_t num, MUL **key)
+hprsat_lookup_value(MUL **base, size_t num, MUL **key)
 {
 	MUL **result;
 
 	result = (MUL **)
-	    bsearch(key, base, num, sizeof(base[0]), &hprsat_compare_value_no_factor);
+	    bsearch(key, base, num, sizeof(base[0]), &hprsat_compare_value);
 
 	if (result == 0)
 		return (-1);
-	else {
-		/* Make sure we return the first occurrence. */
-		while (result != base &&
-		       hprsat_compare_value_no_factor(result, result - 1) == 0)
-			result--;
+	else
 		return (result - base);
-	}
 }
 
 static bool
-hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &which)
+hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &dst_which)
 {
-	/* Try to divide. */
-	MUL mul(which / *src.last());
+	const MUL &src_which = *src.last();
 
-	/* Check if division was exact. */
-	if ((mul * *src.last()) != which)
-		return (false);
+	/* Try to divide. */
+	MUL mul;
+
+	if (dst_which.compare(src_which, HPRSAT_CMP_NFA) == 0) {
+		mul = MUL(1);
+	} else {
+		mul = MUL(dst_which).resetFactor() /
+		      MUL(src_which).resetFactor();
+
+		/* Check if division was not exact. */
+		if ((mul * src_which).compare(dst_which, HPRSAT_CMP_NFA) != 0)
+			return (false);
+	}
+
+	/* Update factors. */
+	mul.factor_lin = dst_which.factor_lin;
+	mul.factor_sqrt = dst_which.factor_sqrt;
+
+	for (MUL *pa = dst.first(); pa; pa = pa->next()) {
+		pa->factor_lin *= src_which.factor_lin;
+		pa->factor_sqrt *= src_which.factor_sqrt;
+	}
 
 	/* Do subtraction. */
 	for (MUL *pa = src.first(); pa; pa = pa->next())
@@ -78,7 +85,7 @@ hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &which)
 static ssize_t
 hprsat_simplify_add_insert(ADD_HEAD_t *xhead, ADD_HEAD_t *pleft,
     MUL **phash, ADD **plast, size_t nhash, ADD *xa,
-    ssize_t newindex, bool ignoreNonZero)
+    ssize_t nindex, bool ignoreNonZero)
 {
 	ssize_t index;
 	bool isNaN;
@@ -104,68 +111,45 @@ hprsat_simplify_add_insert(ADD_HEAD_t *xhead, ADD_HEAD_t *pleft,
 	if (pa->isNegative())
 		xa->negate();
 
-	index = hprsat_lookup_value_no_factor(phash, nhash, &pa);
-
-	/* Try GCD first. */
+	/* Try to lookup current value. */
+	index = hprsat_lookup_value(phash, nhash, &pa);
 	if (index != -1) {
-		for (ssize_t match = index; match != nhash; match++) {
-			if (match != index &&
-			    hprsat_compare_value_no_factor(phash + index, phash + match) != 0)
-				break;
-
-			if (plast[match] == 0) {
-				continue;
-			} else if (hprsat_simplify_subtract_gcd(*plast[match], *xa, *pa)) {
-				goto top;
-			} else if (hprsat_simplify_subtract_gcd(*xa, *plast[match], *phash[match])) {
-				HPRSAT_SWAP(plast[match], xa);
-				goto top;
-			}
+		if (plast[index] != 0) {
+			hprsat_simplify_subtract_gcd(*plast[index], *xa, *pa);
+			goto top;
+		} else {
+			plast[index] = xa;
+			return (index);
 		}
-		if (newindex == -1) {
-			/* Find a free slot, if any. */
-			for (ssize_t match = index; match != nhash; match++) {
-				if (match != index &&
-				    hprsat_compare_value_no_factor(phash + index, phash + match) != 0)
-					break;
-				if (plast[match] == 0) {
-					newindex = match;
-					break;
-				}
-			}
-		}
-	}
-
-	index = newindex;
-	if (index == -1) {
+	} else if (nindex == -1) {
 		xa->remove(xhead)->insert_tail(pleft);
 		return (-1);	/* No free index */
 	}
 
-	/* the entry doesn't exist, so we need to re-hash */
-	*phash[index] = *pa;
-	plast[index] = xa;
+	/* The entry doesn't exist, so we need to re-hash. */
+	*phash[nindex] = *pa;
+	plast[nindex] = xa;
 
-	/* insertion sort - move down */
-	for (; index != 0; index--) {
-		if (hprsat_compare_value(phash + index - 1, phash + index) > 0) {
-			HPRSAT_SWAP(phash[index - 1], phash[index]);
-			HPRSAT_SWAP(plast[index - 1], plast[index]);
+	/* Insertion sort - move down. */
+	for (; nindex != 0; nindex--) {
+		if (hprsat_compare_value(phash + nindex - 1, phash + nindex) > 0) {
+			HPRSAT_SWAP(phash[nindex - 1], phash[nindex]);
+			HPRSAT_SWAP(plast[nindex - 1], plast[nindex]);
 		} else {
 			break;
 		}
 	}
 
-	/* insertion sort - move up */
-	for (; index != nhash - 1; index++) {
-		if (hprsat_compare_value(phash + index, phash + index + 1) > 0) {
-			HPRSAT_SWAP(phash[index], phash[index + 1]);
-			HPRSAT_SWAP(plast[index], plast[index + 1]);
+	/* Insertion sort - move up. */
+	for (; nindex != (ssize_t)(nhash - 1); nindex++) {
+		if (hprsat_compare_value(phash + nindex, phash + nindex + 1) > 0) {
+			HPRSAT_SWAP(phash[nindex], phash[nindex + 1]);
+			HPRSAT_SWAP(plast[nindex], plast[nindex + 1]);
 		} else {
 			break;
 		}
 	}
-	return (index);
+	return (nindex);
 }
 
 bool
@@ -244,15 +228,9 @@ hprsat_simplify_add(ADD_HEAD_t *xhead, bool ignoreNonZero)
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
 
-		switch (hprsat_simplify_add_insert(xhead, &leftover, phash,
-		    plast, nhash, xa, -1, ignoreNonZero)) {
-		case -1:
-			break;
-		case -2:
+		if (hprsat_simplify_add_insert(xhead, &leftover, phash,
+		    plast, nhash, xa, -1, ignoreNonZero) == -2)
 			goto err_non_zero;
-		default:
-			break;
-		}
 	}
 
 	printf("# NHASH=%zd\n", nhash);
@@ -266,7 +244,7 @@ repeat_0:
 		if (xa == 0)
 			continue;
 
-		index = hprsat_lookup_value_no_factor(phash, nhash, phash + x);
+		index = hprsat_lookup_value(phash, nhash, phash + x);
 		if (index < 0)
 			continue;
 
@@ -289,6 +267,7 @@ repeat_0:
 
 				index = hprsat_simplify_add_insert(xhead, &leftover, phash,
 				    plast, nhash, xb, y, ignoreNonZero);
+
 				switch (index) {
 				case -1:
 					break;

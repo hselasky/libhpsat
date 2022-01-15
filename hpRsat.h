@@ -223,6 +223,11 @@ public:
 		factor_lin = -factor_lin;
 		return (*this);
 	};
+	MUL & resetFactor() {
+		factor_lin = 1;
+		factor_sqrt = 1;
+		return (*this);
+	};
 	hprsat_var_t maxVar(hprsat_var_t limit = HPRSAT_VAR_MAX) const;
 	hprsat_var_t minVar(hprsat_var_t limit = HPRSAT_VAR_MIN) const;
 	MUL & addVar(hprsat_var_t delta);
@@ -288,7 +293,10 @@ public:
 	ADD *alast(void) const {
 		return (TAILQ_LAST(&ahead, ADD_HEAD));
 	};
-	int compare(const MUL & other, bool compareFactor = true) const;
+	int compare(const MUL & other, uint8_t = 0) const;
+#define	HPRSAT_CMP_ALL 0	/* compare everything */
+#define	HPRSAT_CMP_NLF 1	/* no linear factor */
+#define	HPRSAT_CMP_NFA 2	/* no linear or sqrt factors */
 
 	bool operator >(const MUL & other) const {
 		return (compare(other) > 0);

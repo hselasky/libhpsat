@@ -93,7 +93,7 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 		pp[count++] = pa;
 
 	for (x = 1; x != count; x++) {
-		if ((pp + x - 1)[0][0].compare((pp + x)[0][0], false) > 0) {
+		if ((pp + x - 1)[0][0].compare((pp + x)[0][0], HPRSAT_CMP_NLF) > 0) {
 			did_sort = true;
 			break;
 		}
@@ -108,7 +108,7 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 		hprsat_val_t value;
 
 		for (y = x + 1; y != count; y++) {
-			if ((pp + x)[0][0].compare((pp + y)[0][0], false) != 0)
+			if ((pp + x)[0][0].compare((pp + y)[0][0], HPRSAT_CMP_NLF) != 0)
 				break;
 			pp[x]->factor_lin += pp[y]->factor_lin;
 		}
@@ -429,10 +429,11 @@ MUL :: print(std::ostream &out) const
 }
 
 int
-MUL :: compare(const MUL & other, bool compareFactor) const
+MUL :: compare(const MUL & other, uint8_t compareFactor) const
 {
 	const size_t na = count();
 	const size_t nb = other.count();
+	int ret;
 
 	if (na > nb)
 		return (1);
@@ -443,13 +444,13 @@ MUL :: compare(const MUL & other, bool compareFactor) const
 	const VAR *pb = other.vfirst();
 
 	while (pa && pb) {
-		const int ret = pa->compare(*pb);
+		ret = pa->compare(*pb);
 		if (ret)
 			return (ret);
 		pa = pa->next();
 		pb = pb->next();
 	}
-	int ret = (pa != 0) - (pb != 0);
+	ret = (pa != 0) - (pb != 0);
 	if (ret)
 		return (ret);
 
@@ -457,7 +458,7 @@ MUL :: compare(const MUL & other, bool compareFactor) const
 	const ADD *qb = other.afirst();
 
 	while (qa && qb) {
-		const int ret = qa->compare(*qb);
+		ret = qa->compare(*qb);
 		if (ret)
 			return (ret);
 		qa = qa->next();
@@ -465,13 +466,13 @@ MUL :: compare(const MUL & other, bool compareFactor) const
 	}
 	ret = (qa != 0) - (qb != 0);
 
-	if (ret)
+	if (ret || compareFactor == HPRSAT_CMP_NFA)
 		return (ret);
 	else if (factor_sqrt > other.factor_sqrt)
 		return (1);
 	else if (factor_sqrt < other.factor_sqrt)
 		return (-1);
-	else if (compareFactor == false)
+	else if (compareFactor == HPRSAT_CMP_NLF)
 		return (0);
 	else if (factor_lin > other.factor_lin)
 		return (1);
