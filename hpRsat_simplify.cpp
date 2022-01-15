@@ -240,7 +240,6 @@ hprsat_simplify_add(ADD_HEAD_t *xhead, bool ignoreNonZero)
 
 	bool any;
 
-top:
 	/* Collect all different kinds of expressions first. */
 	TAILQ_INIT(&mulmap);
 	TAILQ_INIT(&leftover);
@@ -382,7 +381,7 @@ repeat_0:
 
 	if (TAILQ_FIRST(&leftover)) {
 		TAILQ_CONCAT(xhead, &leftover, entry);
-		goto top;
+		return (true);
 	}
 
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
@@ -401,9 +400,7 @@ repeat_0:
 			}
 		}
 	}
-	if (any)
-		goto top;
-	return (false);
+	return (any);
 
 err_non_zero:
 	hprsat_free(xhead);
