@@ -16,6 +16,11 @@ Unlike other SAT libraries, this library tries to derive a solution
 by equation instead of trial and error. Further the library has been
 optimised to handle large amounts of variables.
 
+## Dependencies
+<pre>
+pkg install gmp
+</pre>
+
 ## How to build under FreeBSD
 <pre>
 make all install

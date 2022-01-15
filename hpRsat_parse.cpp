@@ -72,6 +72,27 @@ hprsat_read_double_value(std::string &line, size_t &offset)
 	return (value / factor);
 }
 
+static hprsat_val_t
+hprsat_read_value(std::string &line, size_t &offset)
+{
+	hprsat_val_t value = 0;
+	bool haveSign = (line[offset] == '-');
+
+	if (haveSign)
+		offset++;
+
+	while (line[offset] != 0) {
+		if (isdigit(line[offset])) {
+			value *= 10.0;
+			value += line[offset] - '0';
+			offset++;
+		} else {
+			break;
+		}
+	}
+	return (value);
+}
+
 static void
 hprsat_skip_space(std::string &line, size_t &offset)
 {
@@ -112,7 +133,7 @@ hprsat_parse_mul(std::string &line, size_t &offset, MUL &output)
 		} else if ((line[offset] >= '0' && line[offset] <= '9') ||
 			   (line[offset] == '-' &&
 			    line[offset+1] >= '0' && line[offset+1] <= '9')) {
-			MUL var(hprsat_read_double_value(line, offset));
+			MUL var(hprsat_read_value(line, offset));
 			hprsat_skip_space(line, offset);
 			output *= var;
 			any = true;

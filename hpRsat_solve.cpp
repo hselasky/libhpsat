@@ -23,8 +23,6 @@
  * SUCH DAMAGE.
  */
 
-#include <math.h>
-
 #include "hpRsat.h"
 
 bool
@@ -83,8 +81,8 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 			hprsat_simplify_add(xhead, useProbability);
 		}
 
-		(new ADD(0.0))->insert_tail(&ahead);
-		(new ADD(1.0,v))->insert_head(&ahead);
+		(new ADD(0))->insert_tail(&ahead);
+		(new ADD(1,v))->insert_head(&ahead);
 
 		TAILQ_CONCAT(&ahead, pderiv, entry);
 		TAILQ_CONCAT(pderiv, &ahead, entry);
@@ -136,7 +134,7 @@ hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
 
 	/* compute the derivated XORs in the right order */
 	for (ADD *xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
-		double score[2] = {};
+		hprsat_val_t score[2] = { 0, 0 };
 		const hprsat_var_t v = xa->first()->vfirst()->var;
 		printf("# VAR %zd\n", v);
 		if (useProbability) {
@@ -144,10 +142,10 @@ hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
 				psol[v] = x;
 
 				for (ADD *xb = xa->next(); xb->first(); xb = xb->next()) {
-					const double test = ADD(*xb).expand_all(psol).getConst(true);
-					if (hprsat_is_nan(test) == false) {
-						score[x] += fabs(test);
-					}
+					bool isNaN;
+					const hprsat_val_t test = ADD(*xb).expand_all(psol).getConst(isNaN, true);
+					if (isNaN == false)
+						score[x] += abs(test);
 				}
 			}
 			psol[v] = (score[0] > score[1]);
@@ -158,7 +156,7 @@ hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
 				if (ADD(*xa).expand_all(psol).isNonZeroConst() == false)
 					break;
 				if (useProbability) {
-					printf(" ERROR=%f/%f", score[0], score[1]);
+					std::cout << " ERROR=" << score[0] << "/" << score[1];
 					break;
 				}
 				psol[v]++;

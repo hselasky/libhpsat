@@ -23,8 +23,6 @@
  * SUCH DAMAGE.
  */
 
-#include <math.h>
-
 #include "hpRsat.h"
 
 hprsat_var_t
@@ -87,11 +85,11 @@ hprsat_sort_or(ADD_HEAD_t *phead)
 	bool did_sort;
 
 	for (pa = TAILQ_FIRST(phead); pa; pa = pn) {
-		const double value = pa->sort().getConst();
+		bool isNaN;
+		const hprsat_val_t value = pa->sort().getConst(isNaN);
 		pn = pa->next();
 
-		if (hprsat_is_nan(value) == false &&
-		    value == 0) {
+		if (isNaN == false && value == 0) {
 			delete pa->remove(phead);
 		} else if (!pa->isVariable()) {
 			pa->remove(phead);
@@ -140,7 +138,7 @@ hprsat_sort_or(ADD_HEAD_t *phead)
 }
 
 bool
-hprsat_sort_mul(ADD_HEAD_t *phead, ADD &defactor, double &factor)
+hprsat_sort_mul(ADD_HEAD_t *phead, ADD &defactor, hprsat_val_t &factor)
 {
 	ADD *pa;
 	ADD *pn;
@@ -149,10 +147,11 @@ hprsat_sort_mul(ADD_HEAD_t *phead, ADD &defactor, double &factor)
 	bool did_sort;
 
 	for (pa = TAILQ_FIRST(phead); pa; pa = pn) {
-		const double value = pa->sort().getConst();
+		bool isNaN;
+		const hprsat_val_t value = pa->sort().getConst(isNaN);
 		pn = pa->next();
 
-		if (hprsat_is_nan(value) == false) {
+		if (isNaN == false) {
 			factor *= value;
 			delete pa->remove(phead);
 		} else {
@@ -160,7 +159,7 @@ hprsat_sort_mul(ADD_HEAD_t *phead, ADD &defactor, double &factor)
 		}
 	}
 
-	if (factor == 0.0) {
+	if (factor == 0) {
 		hprsat_free(phead);
 		return (false);
 	}
@@ -221,34 +220,18 @@ ADD :: operator *(const ADD &other) const
 	return (temp.sort());
 }
 
-double hprsat_nan;
-
-static void __attribute__((__constructor__))
-hprsat_nan_init(void)
-{
-	hprsat_nan = nan("");
-}
-
 bool
-hprsat_is_nan(double value)
+hprsat_try_sqrt(hprsat_val_t &value, bool doSqrt)
 {
-	return (isnan(value));
-}
-
-bool
-hprsat_try_sqrt(double &value, bool doSqrt)
-{
-	if (isnan(value)) {
-		return (false);
-	} else if (doSqrt) {
-		value = sqrt(fabs(value));
+	if (doSqrt) {
+		value = sqrt(abs(value));
 		return (true);
-	} else if (value == 0.0 || value == 1.0) {
+	} else if (value == 0 || value == 1) {
 		return (true);
-	} else if (value < 0.0 || floor(value) != value) {
+	} else if (value < 0) {
 		return (false);
 	} else {
-		double test = sqrt(value);
+		hprsat_val_t test = sqrt(value);
 		if ((test * test) == value) {
 			value = test;
 			return (true);
@@ -268,8 +251,9 @@ ADD :: doGCD()
 	MUL factor(*pa);
 
 	while ((pa = pa->next()) != 0) {
-		double value = pa->getConst();
-		if (hprsat_is_nan(value) == false && value == 0.0)
+		bool isNaN;
+		hprsat_val_t value = pa->getConst(isNaN);
+		if (isNaN == false && value == 0)
 			return (*this);
 		factor.doGCD(*pa);
 	}
@@ -283,8 +267,9 @@ ADD :: doGCD()
 	for (aa = factor.afirst(); aa; aa = an) {
 		an = aa->next();
 
-		double value = aa->getConst(true);
-		if (hprsat_is_nan(value))
+		bool isNaN;
+		hprsat_val_t value = aa->getConst(isNaN, true);
+		if (isNaN)
 			delete aa->remove(&factor.ahead);
 	}
 

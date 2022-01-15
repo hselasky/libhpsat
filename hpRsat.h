@@ -36,13 +36,15 @@
 
 #include <iostream>
 
-extern double hprsat_nan;
+#include <gmpxx.h>
 
 #define	HPRSAT_SWAP(a,b) do {			\
 	__typeof(a) __tmp = (a);		\
 	(a) = (b);				\
 	(b) = __tmp;				\
 } while (0)
+
+typedef mpz_class hprsat_val_t;
 
 typedef ssize_t hprsat_var_t;
 constexpr hprsat_var_t HPRSAT_VAR_MAX = SSIZE_MAX;	/* exclusive */
@@ -60,8 +62,7 @@ class ADD;
 typedef TAILQ_CLASS_HEAD(ADD_HEAD, ADD) ADD_HEAD_t;
 typedef TAILQ_CLASS_ENTRY(ADD) ADD_ENTRY_t;
 
-extern bool hprsat_try_sqrt(double &, bool = false);
-extern bool hprsat_is_nan(double);
+extern bool hprsat_try_sqrt(hprsat_val_t &, bool = false);
 
 class VAR {
 public:
@@ -88,8 +89,9 @@ public:
 	bool isVariable() const {
 		return (true);
 	};
-	double getConst() const {
-		return (hprsat_nan);	/* value is undefined */
+	hprsat_val_t getConst(bool &isNaN) const {
+		isNaN = true;	/* value is undefined */
+		return (0);
 	};
 	bool contains(hprsat_var_t _var) const {
 		return (var == _var);
@@ -105,8 +107,10 @@ public:
 	};
 
 	void print(std::ostream &out = std::cout) const  {
-		const double value = getConst();
-		if (hprsat_is_nan(value)) {
+		bool isNaN;
+		const hprsat_val_t value = getConst(isNaN);
+
+		if (isNaN) {
 			out << "v" << var;
 		} else {
 			out << value;
@@ -140,10 +144,11 @@ public:
 	bool operator !=(const VAR & other) const {
 		return (compare(other) != 0);
 	};
-	VAR *sort_insert_tail(VAR_HEAD_t *phead, double &factor) {
-		const double value = getConst();
+	VAR *sort_insert_tail(VAR_HEAD_t *phead, hprsat_val_t &factor) {
+		bool isNaN;
+		const hprsat_val_t value = getConst(isNaN);
 		VAR *pn = next();
-		if (hprsat_is_nan(value)) {
+		if (isNaN) {
 			TAILQ_INSERT_TAIL(phead, this, entry);
 		} else {
 			delete this;
@@ -181,21 +186,14 @@ public:
 	MUL_ENTRY_t entry;
 	VAR_HEAD_t vhead;	/* and list */
 	ADD_HEAD_t ahead;	/* square root list */
-	double factor_lin;
-	double factor_sqrt;
+	hprsat_val_t factor_lin;
+	hprsat_val_t factor_sqrt;
 
 	MUL() {
 		TAILQ_INIT(&vhead);
 		TAILQ_INIT(&ahead);
-		factor_lin = 1.0;
-		factor_sqrt = 1.0;
-	};
-	MUL(const VAR &other) {
-		TAILQ_INIT(&vhead);
-		TAILQ_INIT(&ahead);
-		factor_lin = 1.0;
-		factor_sqrt = 1.0;
-		other.dup()->insert_tail(&vhead);
+		factor_lin = 1;
+		factor_sqrt = 1;
 	};
 	MUL(const MUL &other) {
 		TAILQ_INIT(&vhead);
@@ -204,11 +202,11 @@ public:
 	};
 	MUL(const ADD &other);
 
-	MUL(double _factor, hprsat_var_t _var = HPRSAT_VAR_MIN) {
+	MUL(hprsat_val_t _factor, hprsat_var_t _var = HPRSAT_VAR_MIN) {
 		TAILQ_INIT(&vhead);
 		TAILQ_INIT(&ahead);
 		factor_lin = _factor;
-		factor_sqrt = 1.0;
+		factor_sqrt = 1;
 		if (_var > HPRSAT_VAR_MIN)
 			(new VAR(_var))->insert_tail(&vhead);
 	};
@@ -219,7 +217,7 @@ public:
 		return (new MUL(*this));
 	};
 	bool isNegative() const {
-		return (factor_lin < 0.0);
+		return (factor_lin < 0);
 	};
 	MUL & negate() {
 		factor_lin = -factor_lin;
@@ -230,7 +228,7 @@ public:
 	MUL & addVar(hprsat_var_t delta);
 	MUL & mulVar(hprsat_var_t factor);
 	bool isVariable() const;
-	double getConst(bool = false) const;
+	hprsat_val_t getConst(bool &, bool = false) const;
 	bool contains(hprsat_var_t var) const;
 	MUL & operator =(const MUL &other);
 	MUL & operator *=(const MUL &other);
@@ -337,13 +335,9 @@ public:
 		TAILQ_INIT(&head);
 		other.dup()->insert_tail(&head);
 	};
-	ADD(const VAR &other) {
+	ADD(hprsat_val_t _factor, hprsat_var_t _var = HPRSAT_VAR_MIN) {
 		TAILQ_INIT(&head);
-		(new MUL(other))->insert_tail(&head);
-	};
-	ADD(double _factor, hprsat_var_t _var = HPRSAT_VAR_MIN) {
-		TAILQ_INIT(&head);
-		if (_factor != 0.0 || _var > HPRSAT_VAR_MIN)
+		if (_factor != 0 || _var > HPRSAT_VAR_MIN)
 			(new MUL(_factor, _var))->insert_tail(&head);
 	};
 	~ADD() {
@@ -369,9 +363,10 @@ public:
 		return (*this);
 	};
 	ADD & doSqrt() {
-		double value = getConst();
+		bool isNaN;
+		hprsat_val_t value = getConst(isNaN);
 
-		if (hprsat_try_sqrt(value)) {
+		if (isNaN == false && hprsat_try_sqrt(value)) {
 			*this = ADD(value);
 			return (*this);
 		}
@@ -391,16 +386,17 @@ public:
 		}
 		return (false);
 	};
-	double getConst(bool doSqrt = false) const {
-		double value = 0.0;
+	hprsat_val_t getConst(bool &isNaN, bool doSqrt = false) const {
+		hprsat_val_t value = 0;
 		for (MUL *pa = first(); pa; pa = pa->next()) {
-			const double temp = pa->getConst(doSqrt);
-			if (hprsat_is_nan(temp)) {
+			const hprsat_val_t temp = pa->getConst(isNaN, doSqrt);
+			if (isNaN) {
 				return (temp);
 			} else {
 				value += temp;
 			}
 		}
+		isNaN = false;
 		return (value);
 	};
 	ADD & operator +=(const ADD &other) {
@@ -460,8 +456,9 @@ public:
 	};
 
 	void print(std::ostream &out = std::cout) const {
-		const double value = getConst();
-		if (hprsat_is_nan(value)) {
+		bool isNaN;
+		const hprsat_val_t value = getConst(isNaN);
+		if (isNaN) {
 			for (MUL *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
 				out << "(";
 				pa->print(out);
@@ -481,10 +478,11 @@ public:
 		TAILQ_INSERT_TAIL(phead, this, entry);
 		return (*this);
 	};
-	ADD *sort_insert_tail(ADD_HEAD_t *phead, double &factor) {
-		const double value = getConst();
+	ADD *sort_insert_tail(ADD_HEAD_t *phead, hprsat_val_t &factor) {
+		bool isNaN;
+		const hprsat_val_t value = getConst(isNaN);
 		ADD *pn = next();
-		if (hprsat_is_nan(value)) {
+		if (isNaN) {
 			TAILQ_INSERT_TAIL(phead, this, entry);
 		} else {
 			delete this;
@@ -562,15 +560,17 @@ public:
 		return (retval);
 	};
 	bool isNonZeroVariable() const {
-		const double value = getConst();
-		if (hprsat_is_nan(value) || value != 0.0)
+		bool isNaN;
+		const hprsat_val_t value = getConst(isNaN);
+		if (isNaN || value != 0)
 			return (true);
 		else
 			return (false);
 	};
 	bool isNonZeroConst() const {
-		const double value = getConst();
-		if (hprsat_is_nan(value) || value == 0.0)
+		bool isNaN;
+		const hprsat_val_t value = getConst(isNaN);
+		if (isNaN || value == 0)
 			return (false);
 		else
 			return (true);
@@ -591,7 +591,7 @@ extern hprsat_var_t hprsat_maxvar(const ADD_HEAD_t *, hprsat_var_t = HPRSAT_VAR_
 extern hprsat_var_t hprsat_minvar(const ADD_HEAD_t *, hprsat_var_t = HPRSAT_VAR_MIN);
 extern void hprsat_free(ADD_HEAD_t *);
 extern bool hprsat_sort_or(ADD_HEAD_t *);
-extern bool hprsat_sort_mul(ADD_HEAD_t *, ADD &, double &);
+extern bool hprsat_sort_mul(ADD_HEAD_t *, ADD &, hprsat_val_t &);
 
 /* Complex version of ADD class. */
 

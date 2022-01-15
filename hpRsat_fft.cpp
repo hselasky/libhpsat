@@ -143,10 +143,17 @@ hprsat_fft_inv(CADD *ptr, uint8_t log2_size, bool doBitreverse)
                 }
         }
 
-	const CADD half(ADD(1.0 / (1LL << log2_size)));
+	hprsat_val_t factor = 1;
+	factor <<= 2 * log2_size;
 
-	for (size_t x = 0; x != max; x++)
-		ptr[x] *= half;
+	ADD div(factor);
+
+	for (size_t x = 0; x != max; x++) {
+		for (MUL *pa = ptr[x].x.first(); pa; pa = pa->next())
+			*pa /= div;
+		for (MUL *pa = ptr[x].y.first(); pa; pa = pa->next())
+			*pa /= div;
+	}
 }
 
 /* Multiply two Fourier two dimensional transforms */

@@ -96,7 +96,7 @@ main(int argc, char **argv)
 	uint8_t *psol = 0;
 
 	if (hprsat_parse(std::cin, &ahead, &vm, verbose) != 0) {
-		fprintf(stderr, "Failed to load CNF\n");
+		fprintf(stderr, "Failed to load input\n");
 		return (1);
 	}
 

@@ -94,7 +94,7 @@ hprsat_subtract_from(ADD &from, ADD &to, bool doFreeFrom)
 
 			xp = xb;
 			xb = xb->next();
-			if (xp->factor_lin == 0.0)
+			if (xp->factor_lin == 0)
 				delete xp->remove(&temp);
 			else
 				xp->remove(&temp)->insert_tail(&to.head);
@@ -134,16 +134,17 @@ hprsat_simplify_add_insert(MUL **phash, ADD **plast,
     size_t nhash, ADD *xa, ssize_t newindex)
 {
 	ssize_t index;
-	double value;
+	bool isNaN;
+	hprsat_val_t value;
 	MUL *pa;
 
  top:
-	value = xa->getConst();
+	value = xa->getConst(isNaN);
 
-	if (hprsat_is_nan(value) == false) {
-		if (value == 0.0) {
+	if (isNaN == false) {
+		if (value == 0) {
 			return (-1);	/* zero */
-		} else if (value != 0.0) {
+		} else if (value != 0) {
 			return (-2);	/* no solution */
 		}
 	}
@@ -392,10 +393,10 @@ repeat_0:
 		/* check if any bits must be constant */
 		for (hprsat_var_t v = HPRSAT_VAR_MAX; (v = xa->maxVar(v)) != HPRSAT_VAR_MIN; ) {
 			if (ADD(*xa).expand(v, false).isNonZeroConst()) {
-				(new ADD(ADD(1.0, v) - ADD(1.0)))->insert_head(xhead);
+				(new ADD(ADD(1, v) - ADD(1)))->insert_head(xhead);
 				any = true;
 			} else if (ADD(*xa).expand(v, true).isNonZeroConst()) {
-				(new ADD(1.0, v))->insert_head(xhead);
+				(new ADD(1, v))->insert_head(xhead);
 				any = true;
 			}
 		}
@@ -405,7 +406,7 @@ repeat_0:
 err_non_zero:
 	hprsat_free(xhead);
 
-	(new ADD(1.0))->insert_tail(xhead);
+	(new ADD(1))->insert_tail(xhead);
 
 	hprsat_free(&mulmap);
 

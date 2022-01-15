@@ -1,8 +1,11 @@
 PROG_CXX=hpRsolve
-LDADD=-lhpRsat
+LDADD=-lhpRsat -lgmp -lgmpxx -lm
+PREFIX?=/usr/local
 MAN=
 SRCS=hpRsolve.cpp
-BINDIR?=/usr/local/bin
+BINDIR?=${PREFIX}/bin
+CFLAGS+=-I${PREFIX}/include
+LDFLAGS+=-L${PREFIX}/lib
 
 .if defined(HAVE_DEBUG)
 CFLAGS+= -g -O0

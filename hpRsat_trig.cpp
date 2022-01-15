@@ -28,7 +28,7 @@
 /*
  * The following functions generates the full sinus and cosinus
  * waveform from [0 to 360> degrees, using the full 32-bit integer
- * range.
+ * range. Note that the resulting value is multiplied by sqrt(2).
  */
 ADD
 hprsat_sin_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
@@ -47,15 +47,15 @@ hprsat_cos_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
 		switch (x) {
 		case 0xFFFFFFFFU:
 		case 0x00000000U:
-			return (ADD(1.0));
+			return (ADD(2).doSqrt());
 		case 0x3FFFFFFFU:
 		case 0x40000000U:
 		case 0xBFFFFFFFU:
 		case 0xC0000000U:
-			return (ADD(0.0));
+			return (ADD(0));
 		case 0x7FFFFFFFU:
 		case 0x80000000U:
-			return (ADD(-1.0));
+			return (ADD(-1) * ADD(2).doSqrt());
 		}
 	}
 
@@ -82,11 +82,11 @@ hprsat_cos_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
 	for (; num != 30; num++) {
 		if (mask & (1U << num)) {
 			if (x & (1U << num))
-				retval = ADD(0.5) - retval * ADD(0.5);
+				retval = ADD(1) - retval;
 			else
-				retval = ADD(0.5) + retval * ADD(0.5);
+				retval = ADD(1) + retval;
 		} else {
-			retval = ADD(0.5) + retval * (ADD(0.5) - ADD(1.0, var++));
+			retval = ADD(1) + retval * (ADD(1) - ADD(1, var++));
 		}
 		retval.doSqrt();
 	}
@@ -96,7 +96,7 @@ hprsat_cos_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
 		if (x & (1ULL << 30))
 			retval.negate();
 	} else {
-		retval *= (ADD(1.0) - ADD(2.0, var++));
+		retval *= (ADD(1) - ADD(2, var++));
 	}
 	return (retval);
 }

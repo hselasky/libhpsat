@@ -8,9 +8,13 @@ SHLIB_MINOR=	0
 CFLAGS+=	-Wall -Wno-invalid-offsetof
 MAN=
 
+PREFIX?=	/usr/local
+
 .if defined(HAVE_DEBUG)
 CFLAGS+= -g -O0 -DDEBUG
 .endif
+
+CFLAGS+=	-I${PREFIX}/include
 
 SRCS= \
 	hpRsat_add.cpp \

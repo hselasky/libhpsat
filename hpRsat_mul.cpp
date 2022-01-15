@@ -23,8 +23,6 @@
  * SUCH DAMAGE.
  */
 
-#include <math.h>
-
 #include "hpRsat.h"
 
 hprsat_var_t
@@ -106,13 +104,17 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 	TAILQ_INIT(phead);
 
 	for (x = 0; x != count; ) {
+		bool isNaN;
+		hprsat_val_t value;
+
 		for (y = x + 1; y != count; y++) {
 			if ((pp + x)[0][0].compare((pp + y)[0][0], false) != 0)
 				break;
 			pp[x]->factor_lin += pp[y]->factor_lin;
 		}
 
-		if (pp[x]->getConst() == 0.0) {
+		value = pp[x]->getConst(isNaN);
+		if (isNaN == false && value == 0) {
 			did_sort = true;
 			delete pp[x];
 		} else {
@@ -137,29 +139,30 @@ MUL :: sort(MUL_HEAD_t *phead)
 
 	MUL *ra;
 
-	if (factor_lin == 0.0 || factor_sqrt == 0.0)
+	if (factor_lin == 0 || factor_sqrt == 0)
 		return (zero());
 
 	for (pa = vfirst(); pa; pa = pn) {
-		const double value = pa->getConst();
+		bool isNaN;
+		const hprsat_val_t value = pa->getConst(isNaN);
 		pn = pa->next();
-		if (hprsat_is_nan(value) == false) {
+		if (isNaN == false) {
 			factor_lin *= value;
 			delete pa->remove(&vhead);
 		}
 	}
 
-	if (factor_lin == 0.0)
+	if (factor_lin == 0)
 		return (zero());
 
-	ADD defactor(1.0);
+	ADD defactor(1);
 
 	hprsat_sort_mul(&ahead, defactor, factor_sqrt);
 
 	if (factor_sqrt == 0)
 		return (zero());
 
-	if (defactor != ADD(1.0)) {
+	if (defactor != ADD(1)) {
 		while (1) {
 			ra = defactor.first();
 			if (ra == 0)
@@ -176,8 +179,8 @@ MUL :: MUL(const ADD &other)
 {
 	TAILQ_INIT(&vhead);
 	TAILQ_INIT(&ahead);
-	factor_lin = 1.0;
-	factor_sqrt = 1.0;
+	factor_lin = 1;
+	factor_sqrt = 1;
 	other.dup()->insert_tail(&ahead);
 }
 
@@ -242,41 +245,42 @@ MUL :: isVariable() const
 	return (false);
 }
 
-double
-MUL :: getConst(bool doSqrt) const
+hprsat_val_t
+MUL :: getConst(bool &isNaN, bool doSqrt) const
 {
-	double value_lin = factor_lin;
-	double value_sqrt = factor_sqrt;
+	hprsat_val_t value_lin = factor_lin;
+	hprsat_val_t value_sqrt = factor_sqrt;
 	bool undefined = false;
 
 	for (VAR *pa = TAILQ_FIRST(&vhead); pa; pa = pa->next()) {
-		const double temp = pa->getConst();
-		if (hprsat_is_nan(temp)) {
+		const hprsat_val_t temp = pa->getConst(isNaN);
+		if (isNaN) {
 			undefined = true;
-			continue;
+		} else {
+			value_lin *= temp;
 		}
-		value_lin *= temp;
 	}
 
 	for (ADD *pa = TAILQ_FIRST(&ahead); pa; pa = pa->next()) {
-		const double temp = pa->getConst(doSqrt);
-		if (hprsat_is_nan(temp)) {
+		const hprsat_val_t temp = pa->getConst(isNaN, doSqrt);
+		if (isNaN) {
 			undefined = true;
-			continue;
+		} else {
+			value_sqrt *= temp;
 		}
-		value_sqrt *= temp;
 	}
 
 	/* Zero is stronger than undefined. */
-	if (value_lin == 0.0 || value_sqrt == 0.0)
-		return (0.0);
-
-	if (undefined)
-		return (hprsat_nan);
-	else if (hprsat_try_sqrt(value_sqrt, doSqrt))
+	if (value_lin == 0 || value_sqrt == 0) {
+		isNaN = false;
+		return (0);
+	} else if (undefined || hprsat_try_sqrt(value_sqrt, doSqrt) == false) {
+		isNaN = true;
+		return (0);
+	} else {
+		isNaN = false;
 		return (value_sqrt * value_lin);
-	else
-		return (hprsat_nan);
+	}
 }
 
 bool
@@ -312,6 +316,9 @@ MUL :: operator =(const MUL &other)
 MUL &
 MUL :: operator *=(const MUL &other)
 {
+	hprsat_val_t value;
+	bool isNaN;
+
 	VAR *p0 = TAILQ_FIRST(&vhead);
 	const VAR *p1 = TAILQ_FIRST(&other.vhead);
 
@@ -363,7 +370,8 @@ MUL :: operator *=(const MUL &other)
 		q1 = q1->next();
 	}
 
-	if (getConst() == 0)
+	value = getConst(isNaN);
+	if (isNaN == false && value == 0)
 		return (zero());
 
 	return (*this);
@@ -380,34 +388,25 @@ MUL :: count() const
 	return (retval);
 }
 
-static void
-hprsat_out_value(std::ostream &out, double value)
-{
-	if (floor(value) == value && fabs(value) < 10000.0) {
-		out << value;
-	} else {
-		out << std::fixed << value << std::defaultfloat;
-	}
-}
-
 void
 MUL :: print(std::ostream &out) const
 {
-	const double value = getConst();
+	bool isNaN;
+	const hprsat_val_t value = getConst(isNaN);
 
-	if (hprsat_is_nan(value)) {
-		if (factor_lin != 1.0) {
-			if (factor_lin != -1.0) {
-				hprsat_out_value(out, factor_lin);
-				if (factor_sqrt != 1.0 || vfirst() || afirst())
+	if (isNaN) {
+		if (factor_lin != 1) {
+			if (factor_lin != -1) {
+				out << factor_lin;
+				if (factor_sqrt != 1 || vfirst() || afirst())
 					out << "*";
 			} else {
 				out << "-";
 			}
 		}
-		if (factor_sqrt != 1.0) {
+		if (factor_sqrt != 1) {
 			out << "sqrt(";
-			hprsat_out_value(out, factor_sqrt);
+			out << factor_sqrt;
 			out << ")";
 			if (vfirst() || afirst())
 				out << "*";
@@ -425,7 +424,7 @@ MUL :: print(std::ostream &out) const
 				out << "*";
 		}
 	} else {
-		hprsat_out_value(out, value);
+		out << value;
 	}
 }
 
@@ -490,7 +489,7 @@ MUL :: expand(hprsat_var_t var, bool value)
 
 		if (pa->contains(var)) {
 			if (value == false)
-				factor_lin = 0.0;
+				factor_lin = 0;
 			delete pa->remove(&vhead);
 		}
 	}
@@ -506,7 +505,7 @@ MUL :: expand_all(const uint8_t *pvar)
 {
 	for (VAR *pa = vfirst(); pa; pa = pa->next()) {
 		if (pvar[pa->var] == 0)
-			factor_lin = 0.0;
+			factor_lin = 0;
 	}
 	hprsat_free(&vhead);
 
@@ -519,33 +518,11 @@ MUL :: expand_all(const uint8_t *pvar)
 MUL &
 MUL :: zero()
 {
-	factor_lin = 0.0;
-	factor_sqrt = 1.0;
+	factor_lin = 0;
+	factor_sqrt = 1;
 	hprsat_free(&vhead);
 	hprsat_free(&ahead);
 	return (*this);
-}
-
-/* greatest common divisor, Euclid equation */
-
-static double
-hprsat_gcd(double a, double b)
-{
-	double an;
-	double bn;
-
-	if (a < 0.0)
-		a = -a;
-	if (b < 0.0)
-		b = -b;
-
-	while (b != 0.0) {
-		an = b;
-		bn = fmod(a, b);
-		a = an;
-		b = bn;
-	}
-	return (a);
 }
 
 MUL &
@@ -559,8 +536,8 @@ MUL :: doGCD(const MUL &other)
 	ADD *ab;
 	ADD *an;
 
-	factor_lin = hprsat_gcd(factor_lin, other.factor_lin);
-	factor_sqrt = hprsat_gcd(factor_sqrt, other.factor_sqrt);
+	factor_lin = gcd(abs(factor_lin), abs(other.factor_lin));
+	factor_sqrt = gcd(abs(factor_sqrt), abs(other.factor_sqrt));
 
 	va = vfirst();
 	vb = other.vfirst();
