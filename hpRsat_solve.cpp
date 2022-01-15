@@ -25,6 +25,14 @@
 
 #include "hpRsat.h"
 
+static void
+hprsat_solve_simplify(ADD_HEAD_t *xhead, bool useProbability = false)
+{
+	while (hprsat_simplify_add(xhead, useProbability) ||
+	       hprsat_elevate_add(xhead, useProbability))
+		;
+}
+
 bool
 hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool useProbability)
 {
@@ -34,7 +42,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 	ADD *xb;
 	ADD *xn;
 
-	hprsat_simplify_add(xhead, useProbability);
+	hprsat_solve_simplify(xhead, useProbability);
 
 	for (hprsat_var_t v = 0; v != vm; v++) {
 
@@ -59,8 +67,8 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 			}
 		}
 
-		hprsat_simplify_add(&bhead[0]);
-		hprsat_simplify_add(&bhead[1]);
+		hprsat_solve_simplify(&bhead[0]);
+		hprsat_solve_simplify(&bhead[1]);
 
 		/* Compute the variable conflict. */
 		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
@@ -78,7 +86,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 
 		if (TAILQ_FIRST(&thead)) {
 			TAILQ_CONCAT(xhead, &thead, entry);
-			hprsat_simplify_add(xhead, useProbability);
+			hprsat_solve_simplify(xhead, useProbability);
 		}
 
 		(new ADD(0))->insert_tail(&ahead);
