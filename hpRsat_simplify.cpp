@@ -323,7 +323,13 @@ repeat_0:
 		if (xa == 0)
 			continue;
 
-		for (y = x + 1; y != nhash; y++) {
+		index = hprsat_lookup_value_no_factor(phash, nhash, phash + x);
+		if (index < 0)
+			continue;
+
+		for (y = index; y != nhash; y++) {
+			if (y == x)
+				continue;
 		repeat_1:
 			xb = plast[y];
 			if (xb == 0)
