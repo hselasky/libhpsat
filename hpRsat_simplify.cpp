@@ -63,8 +63,13 @@ hprsat_lookup_value_no_factor(MUL **base, size_t num, MUL **key)
 
 	if (result == 0)
 		return (-1);
-	else
+	else {
+		/* Make sure we return the first occurrence. */
+		while (result != base &&
+		       hprsat_compare_value_no_factor(result, result - 1) == 0)
+			result--;
 		return (result - base);
+	}
 }
 
 static void
@@ -162,9 +167,6 @@ hprsat_simplify_add_insert(MUL **phash, ADD **plast,
 
 		/* Try GCD. */
 		if (index != -1) {
-			while (index != 0 &&
-			       hprsat_compare_value_no_factor(phash + index - 1, phash + index) == 0)
-				index--;
 			for (ssize_t match = index; match != nhash; match++) {
 				if (match != index &&
 				    hprsat_compare_value_no_factor(phash + index, phash + match) != 0)
