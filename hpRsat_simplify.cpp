@@ -72,6 +72,7 @@ hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &dst_which)
 
 	for (MUL *pa = dst.first(); pa; pa = pa->next()) {
 		pa->factor_lin *= src_which.factor_lin;
+		hprsat_do_global_modulus(pa->factor_lin);
 		pa->factor_sqrt *= src_which.factor_sqrt;
 	}
 

@@ -58,3 +58,20 @@ hprsat_free(VAR_HEAD_t *phead)
 	while ((pa = TAILQ_FIRST(phead)) != 0)
 		delete pa->remove(phead);
 }
+
+VAR *
+VAR :: sort_insert_tail(VAR_HEAD_t *phead, hprsat_val_t &factor)
+{
+	bool isNaN;
+	const hprsat_val_t value = getConst(isNaN);
+	VAR *pn = next();
+
+	if (isNaN) {
+		TAILQ_INSERT_TAIL(phead, this, entry);
+	} else {
+		delete this;
+		factor *= value;
+		hprsat_do_global_modulus(factor);
+	}
+	return (pn);
+}

@@ -153,6 +153,7 @@ hprsat_sort_mul(ADD_HEAD_t *phead, ADD &defactor, hprsat_val_t &factor)
 
 		if (isNaN == false) {
 			factor *= value;
+			hprsat_do_global_modulus(factor);
 			delete pa->remove(phead);
 		} else {
 			count++;
@@ -239,4 +240,37 @@ hprsat_try_sqrt(hprsat_val_t &value, bool doSqrt)
 			return (false);
 		}
 	}
+}
+
+ADD *
+ADD :: sort_insert_tail(ADD_HEAD_t *phead, hprsat_val_t &factor)
+{
+	bool isNaN;
+	const hprsat_val_t value = getConst(isNaN);
+	ADD *pn = next();
+	if (isNaN) {
+		TAILQ_INSERT_TAIL(phead, this, entry);
+	} else {
+		delete this;
+		factor *= value;
+		hprsat_do_global_modulus(factor);
+	}
+	return (pn);
+}
+
+hprsat_val_t
+ADD :: getConst(bool &isNaN, bool doSqrt) const
+{
+	hprsat_val_t value = 0;
+	for (MUL *pa = first(); pa; pa = pa->next()) {
+		const hprsat_val_t temp = pa->getConst(isNaN, doSqrt);
+		if (isNaN) {
+			return (temp);
+		} else {
+			value += temp;
+			hprsat_do_global_modulus(value);
+		}
+	}
+	isNaN = false;
+	return (value);
 }

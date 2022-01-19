@@ -42,6 +42,11 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 	ADD *xb;
 	ADD *xn;
 
+	if (hprsat_global_modulus == 0)
+		hprsat_set_global_modulus(xhead);
+
+	std::cout << "# MODULUS " << hprsat_global_modulus << "\n";
+
 	hprsat_solve_simplify(xhead, useProbability);
 
 	for (hprsat_var_t v = 0; v != vm; v++) {

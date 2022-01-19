@@ -111,6 +111,7 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 			if ((pp + x)[0][0].compare((pp + y)[0][0], HPRSAT_CMP_NLF) != 0)
 				break;
 			pp[x]->factor_lin += pp[y]->factor_lin;
+			hprsat_do_global_modulus(pp[x]->factor_lin);
 		}
 
 		value = pp[x]->getConst(isNaN);
@@ -148,6 +149,7 @@ MUL :: sort(MUL_HEAD_t *phead)
 		pn = pa->next();
 		if (isNaN == false) {
 			factor_lin *= value;
+			hprsat_do_global_modulus(factor_lin);
 			delete pa->remove(&vhead);
 		}
 	}
@@ -258,6 +260,7 @@ MUL :: getConst(bool &isNaN, bool doSqrt) const
 			undefined = true;
 		} else {
 			value_lin *= temp;
+			hprsat_do_global_modulus(value_lin);
 		}
 	}
 
@@ -326,6 +329,8 @@ MUL :: operator *=(const MUL &other)
 	const ADD *q1 = TAILQ_FIRST(&other.ahead);
 
 	factor_lin *= other.factor_lin;
+	hprsat_do_global_modulus(factor_lin);
+
 	factor_sqrt *= other.factor_sqrt;
 
 	TAILQ_INIT(&vhead);

@@ -144,18 +144,7 @@ public:
 	bool operator !=(const VAR & other) const {
 		return (compare(other) != 0);
 	};
-	VAR *sort_insert_tail(VAR_HEAD_t *phead, hprsat_val_t &factor) {
-		bool isNaN;
-		const hprsat_val_t value = getConst(isNaN);
-		VAR *pn = next();
-		if (isNaN) {
-			TAILQ_INSERT_TAIL(phead, this, entry);
-		} else {
-			delete this;
-			factor *= value;
-		}
-		return (pn);
-	};
+	VAR *sort_insert_tail(VAR_HEAD_t *, hprsat_val_t &);
 	VAR & insert_tail(VAR_HEAD_t *phead) {
 		TAILQ_INSERT_TAIL(phead, this, entry);
 		return (*this);
@@ -392,19 +381,7 @@ public:
 		}
 		return (false);
 	};
-	hprsat_val_t getConst(bool &isNaN, bool doSqrt = false) const {
-		hprsat_val_t value = 0;
-		for (MUL *pa = first(); pa; pa = pa->next()) {
-			const hprsat_val_t temp = pa->getConst(isNaN, doSqrt);
-			if (isNaN) {
-				return (temp);
-			} else {
-				value += temp;
-			}
-		}
-		isNaN = false;
-		return (value);
-	};
+	hprsat_val_t getConst(bool &, bool = false) const;
 	ADD & operator +=(const ADD &other) {
 		for (MUL *pa = other.first(); pa; pa = pa->next())
 			(new MUL(*pa))->insert_tail(&head);
@@ -484,18 +461,7 @@ public:
 		TAILQ_INSERT_TAIL(phead, this, entry);
 		return (*this);
 	};
-	ADD *sort_insert_tail(ADD_HEAD_t *phead, hprsat_val_t &factor) {
-		bool isNaN;
-		const hprsat_val_t value = getConst(isNaN);
-		ADD *pn = next();
-		if (isNaN) {
-			TAILQ_INSERT_TAIL(phead, this, entry);
-		} else {
-			delete this;
-			factor *= value;
-		}
-		return (pn);
-	};
+	ADD *sort_insert_tail(ADD_HEAD_t *, hprsat_val_t &);
 	ADD & insert_head(ADD_HEAD_t *phead) {
 		TAILQ_INSERT_HEAD(phead, this, entry);
 		return (*this);
