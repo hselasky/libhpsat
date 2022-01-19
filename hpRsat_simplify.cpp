@@ -259,13 +259,7 @@ repeat_0:
 		if (xa == 0)
 			continue;
 
-		index = hprsat_lookup_value(phash, nhash, phash + x);
-		if (index < 0)
-			continue;
-
-		for (y = index; y != nhash; y++) {
-			if (y == x)
-				continue;
+		for (y = x + 1; y != nhash; y++) {
 		repeat_1:
 			xb = plast[y];
 			if (xb == 0)
@@ -283,8 +277,6 @@ repeat_0:
 				case -1:
 					break;
 				case -2:
-					if (ignoreNonZero)
-						break;
 					goto err_non_zero;
 				default:
 					any = true;
