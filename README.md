@@ -58,7 +58,7 @@ EOF
 Squaring circuit (v0,v1,v2,v3) ** 2 = 49
 <pre>
 cat << EOF | hpRsolve -v -c
-1 * v0 + 4 * v1 + 16 * v2 + 64 * v3 + 4 * v0 * v1 + 8 * v0 * v2 + 16 * v0 * v3 + 16 * v1 * v2 + 32 * v1 * v3 + 64 * v2 * v3 - 49
+(v0 + v1 * 2 + v2 * 4 + v3 * 8) * (v0 + v1 * 2 + v2 * 4 + v3 * 8) - 49
 EOF
 </pre>
 
@@ -66,7 +66,7 @@ EOF
 Multiplying circuit (v0,v1,v2,v3) * (v4,v5,v6,v7) = 143
 <pre>
 cat << EOF | hpRsolve -v
-1*v0*v4 + 2*v0*v5 + 4*v0*v6 + 8*v0*v7 + 2*v1*v4 + 4*v1*v5 + 8*v1*v6 + 16*v1*v7 + 4*v2*v4 + 8*v2*v5 + 16*v2*v6 + 32*v2*v7 + 8*v3*v4 + 16*v3*v5 + 32*v3*v6 + 64*v3*v7 - 143
+(v0 + v1 * 2 + v2 * 4 + v3 * 8) * (v4 + v5 * 2 + v6 * 4 + v7 * 8) - 143
 EOF
 </pre>
 
