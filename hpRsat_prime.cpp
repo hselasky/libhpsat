@@ -49,6 +49,7 @@ public:
 
 hprsat_val_t hprsat_global_modulus;
 hprsat_val_t hprsat_global_exponent;
+hprsat_val_t hprsat_global_half;
 static hprsat_prime_head_t hprsat_prime_head = TAILQ_HEAD_INITIALIZER(hprsat_prime_head);
 
 static void
@@ -132,6 +133,9 @@ top:
 
 	/* Set global exponent. */
 	hprsat_global_exponent = hprsat_global_modulus - 2;
+
+	/* Set global half. */
+	hprsat_global_half = hprsat_global_modulus / 2;
 }
 
 void
@@ -150,4 +154,18 @@ hprsat_do_global_inverse(const hprsat_val_t &val, hprsat_val_t &r)
 	mpz_powm(r.get_mpz_t(), val.get_mpz_t(),
 		 hprsat_global_exponent.get_mpz_t(),
 		 hprsat_global_modulus.get_mpz_t());
+}
+
+void
+hprsat_do_global_sign(hprsat_val_t &r)
+{
+	if (r > hprsat_global_half)
+		r -= hprsat_global_modulus;
+}
+
+void
+hprsat_do_global_abs(hprsat_val_t &r)
+{
+	if (r > hprsat_global_half)
+		r = hprsat_global_modulus - r;
 }
