@@ -123,10 +123,6 @@ hprsat_simplify_add_insert(ADD_HEAD_t *xhead, ADD_HEAD_t *pleft,
 	pa = xa->last();
 	assert(pa != 0);
 
-	/* Top-most value should be positive. */
-	if (pa->isNegative())
-		xa->negate();
-
 	/* Try to lookup current value. */
 	index = hprsat_lookup_value(phash, nhash, &pa);
 	if (index != -1) {
@@ -199,12 +195,8 @@ hprsat_simplify_add(ADD_HEAD_t *xhead, bool ignoreNonZero)
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
 		xa->sort();
 
-		for (pa = xa->first(); pa; pa = pa->next()) {
-			if (pa->isNegative())
-				pa->dup()->negate().insert_tail(&mulmap);
-			else
-				pa->dup()->insert_tail(&mulmap);
-		}
+		for (pa = xa->first(); pa; pa = pa->next())
+			pa->dup()->insert_tail(&mulmap);
 	}
 
 	/* Build a hashmap. */
