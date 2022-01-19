@@ -676,6 +676,7 @@ extern void hprsat_do_global_modulus(hprsat_val_t &);
 extern void hprsat_do_global_inverse(const hprsat_val_t &, hprsat_val_t &);
 extern void hprsat_do_global_sign(hprsat_val_t &);
 extern void hprsat_do_global_abs(hprsat_val_t &);
+extern void hprsat_do_global_scale(const hprsat_val_t &, const hprsat_val_t &, hprsat_val_t &);
 
 /* simplify functions */
 

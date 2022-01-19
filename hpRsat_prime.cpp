@@ -169,3 +169,14 @@ hprsat_do_global_abs(hprsat_val_t &r)
 	if (r > hprsat_global_half)
 		r = hprsat_global_modulus - r;
 }
+
+void
+hprsat_do_global_scale(const hprsat_val_t &quotient, const hprsat_val_t &divisor,
+    hprsat_val_t &result)
+{
+	hprsat_val_t divisor_inv;
+
+	hprsat_do_global_inverse(divisor, divisor_inv);
+	result = quotient * divisor_inv;
+	hprsat_do_global_modulus(result);
+}
