@@ -654,7 +654,7 @@ extern void hprsat_print_digraph(std::ostream &, ADD_HEAD_t *);
 
 /* elevate functions */
 
-extern bool hprsat_elevate_add(ADD_HEAD_t *, bool = false);
+extern bool hprsat_elevate_add(ADD_HEAD_t *, size_t = 64);
 
 /* fast Fourier transforms */
 

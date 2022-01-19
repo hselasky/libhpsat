@@ -29,7 +29,7 @@ static void
 hprsat_solve_simplify(ADD_HEAD_t *xhead, bool useProbability = false)
 {
 	while (hprsat_simplify_add(xhead, useProbability) ||
-	       hprsat_elevate_add(xhead, useProbability))
+	       hprsat_elevate_add(xhead))
 		;
 }
 

@@ -1,4 +1,4 @@
- /*-
+/*-
  * Copyright (c) 2022 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,44 +27,124 @@
 
 #include "hpRsat.h"
 
-class hprsat_level {
+class hprsat_range {
 public:
-	hprsat_level() {
-		value = 0;
-		num_rem = 0;
+	hprsat_range() {
+		step = 0;
+		combo = 0;
 		num_pos = 0;
 		num_neg = 0;
+		num_res = 0;
+		variable = 0;
 	};
-	hprsat_val_t value;
-	hprsat_val_t num_rem;
-	ssize_t num_pos;
-	ssize_t num_neg;
+	hprsat_val_t step;
+	hprsat_val_t combo;
+	hprsat_val_t num_pos;
+	hprsat_val_t num_neg;
+	hprsat_val_t num_res;
+	bool variable;
 };
 
 static int
-hprsat_compare_value(const void *_a, const void *_b)
+hprsat_compare_range(const void *_a, const void *_b)
 {
-	const hprsat_level *a = *(const hprsat_level * const *)_a;
-	const hprsat_level *b = *(const hprsat_level * const *)_b;
+	const hprsat_range *a = *(const hprsat_range * const *)_a;
+	const hprsat_range *b = *(const hprsat_range * const *)_b;
 
-	if (a->value > b->value)
+	hprsat_val_t va = a->num_pos + a->num_neg;
+	hprsat_val_t vb = b->num_pos + b->num_neg;
+
+	if (va > vb)
 		return (1);
-	else if (a->value < b->value)
+	else if (va < vb)
 		return (-1);
 	else
 		return (0);
 }
 
 static void
-hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, bool ignoreNonZero, bool &any)
+hprsat_clip(hprsat_val_t &value)
 {
-	hprsat_level *plevel;
-	hprsat_level **pplevel;
+	if (value > hprsat_global_modulus)
+		value = hprsat_global_modulus;
+}
+
+/*
+ * Returns true if ranges were merged.
+ */
+static bool
+hprsat_merge_range(const hprsat_range &from, hprsat_range &to)
+{
+	hprsat_val_t d;
+
+	/* d = (from.step / to.step) */
+	hprsat_do_global_inverse(to.step, d);
+	d *= from.step;
+	hprsat_do_global_modulus(d);
+
+	/* Check for intersection. */
+	if (to.num_pos >= d || to.num_neg >= d) {
+		/* Extend range. */
+		to.num_pos += from.num_pos * d;
+		to.num_neg += from.num_neg * d;
+		hprsat_clip(to.num_pos);
+		hprsat_clip(to.num_neg);
+		return (true);
+	}
+
+	/* d = -d */
+	d = hprsat_global_modulus - d;
+
+	/* Check for intersection. */
+	if (to.num_pos >= d || to.num_neg >= d) {
+		/* Extend range. */
+		to.num_pos += from.num_neg * d;
+		to.num_neg += from.num_pos * d;
+		hprsat_clip(to.num_pos);
+		hprsat_clip(to.num_neg);
+		return (true);
+	}
+	return (false);
+}
+
+/*
+ * Returns true if ranges were merged.
+ */
+static bool
+hprsat_within_range(const hprsat_val_t step, hprsat_range &range)
+{
+	hprsat_val_t d;
+
+	/* d = (from.step / to.step) */
+	hprsat_do_global_inverse(range.step, d);
+	d *= step;
+	hprsat_do_global_modulus(d);
+
+	/* Store combination. */
+	range.combo = d;
+
+	return (d <= range.num_pos || (hprsat_global_modulus - d) <= range.num_neg);
+}
+
+static bool
+hprsat_intersects(const MUL &mul, hprsat_range &to)
+{
+	hprsat_range from;
+
+	from.step = mul.factor_lin;
+
+	return (hprsat_merge_range(from, to));
+}
+
+static bool
+hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, size_t searchLimit)
+{
+	hprsat_range *prange;
+	hprsat_range **pprange;
 	hprsat_val_t bias = 0;
-	hprsat_val_t total_min = 0;
-	hprsat_val_t total_max = 0;
 	size_t count = 0;
-	size_t x,y,z;
+	size_t x,y;
+	bool ret;
 
 	MUL *pa;
 	MUL *pn;
@@ -74,115 +154,198 @@ hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, bool ignoreNonZero, bool &any)
 	for (pa = xa->first(); pa; pa = pa->next()) {
 		/* No square roots are supported. */
 		if (pa->factor_sqrt != 1 || pa->afirst() != 0)
-			return;
+			return (false);
+		/* Skip constants. */
+		if (pa->vfirst() == 0 || pa->factor_lin == 0)
+			continue;
 		count++;
 	}
 
+	/* No variables, nothing to do! */
 	if (count == 0)
-		return;
+		return (false);
 
-	plevel = new hprsat_level [count];
-	pplevel = new hprsat_level * [count];
+	/* Reserve one extra element for a constant, if any. */
+	prange = new hprsat_range [count];
+	pprange = new hprsat_range * [count];
 
 	count = 0;
 
 	for (pa = xa->first(); pa; pa = pa->next()) {
+		/* Accumulate constants. */
 		if (pa->vfirst() == 0 || pa->factor_lin == 0) {
 			bias += pa->factor_lin;
-		} else if (pa->factor_lin < 0) {
-			total_min += pa->factor_lin;
-			plevel[count].value = - pa->factor_lin;
-			plevel[count].num_neg = -1;
-			pplevel[count] = plevel + count;
-			count++;
-		} else {
-			total_max += pa->factor_lin;
-			plevel[count].value = pa->factor_lin;
-			plevel[count].num_pos = 1;
-			pplevel[count] = plevel + count;
-			count++;
+			continue;
 		}
+
+		/* Setup range element. */
+		prange[count].step = pa->factor_lin;
+		prange[count].num_pos = 1;
+		pprange[count] = prange + count;
+		count++;
 	}
 
-	/* Check for out of range. */
-	if ((total_min + bias) > 0 || (total_max + bias) < 0) {
-		delete [] plevel;
-		delete [] pplevel;
-		*xa = ADD(1);		/* no solution - out of range */
-		return;
-	}
+	/* Try to merge the range elements. */
+	while (1) {
+		bool found = false;
 
-	mergesort(pplevel, count, sizeof(pplevel[0]), &hprsat_compare_value);
-
-	/* Accumulate equal entries. */
-	for (x = z = 0; x != count; ) {
-		for (y = x + 1; y != count; y++) {
-			if (hprsat_compare_value(pplevel + x, pplevel + y))
-				break;
-			pplevel[x]->num_neg += pplevel[y]->num_neg;
-			pplevel[x]->num_pos += pplevel[y]->num_pos;
-		}
-		pplevel[z++] = pplevel[x];
-		x = y;
-	}
-	count = z;
-
-	/* Check if part of equation can be elevated. */
-	for (x = 0; x != count; x++) {
-		hprsat_level &cur = *pplevel[x];
-		hprsat_val_t cur_min = cur.value * cur.num_neg;
-		hprsat_val_t cur_max = cur.value * cur.num_pos;
-
-		total_min -= cur_min;
-		total_max -= cur_max;
-
-		/* Range check. */
-		if ((total_min == 0 ||
-		     total_min > -cur.value) &&
-		    (total_max == 0 ||
-		     total_max < cur.value)) {
-			/* Don't remove the last one. */
-			if (total_min == 0 &&
-			    total_max == 0)
-				break;
-
-			xn = new ADD();
-			for (pa = xa->first(); pa; pa = pn) {
-				pn = pa->next();
-				if (pa->vfirst() == 0 || pa->factor_lin == 0) {
-					pa->factor_lin %= cur.value;
-				} else if (pa->factor_lin == cur.value ||
-					   pa->factor_lin == -cur.value) {
-					pa->remove(&xa->head)->insert_tail(&xn->head);
+		for (x = 0; x != count; x++) {
+			if (pprange[x] == 0)
+				continue;
+			for (y = 0; y != count; y++) {
+				if (x == y || pprange[y] == 0)
+					continue;
+				if (hprsat_merge_range(*pprange[y], *pprange[x])) {
+					pprange[y] = 0;
+					found = true;
 				}
 			}
-			(new MUL(bias - (bias % cur.value)))->insert_head(&xn->head);
-
-			bias %= cur.value;
-
-			xn->sort().insert_tail(phead);
-			any = true;
-		} else {
-			total_min += cur_min;
-			total_max += cur_max;
 		}
+		if (found == false)
+			break;
 	}
 
-	delete [] plevel;
-	delete [] pplevel;
+	/* Remove all unused entries. */
+	for (x = y = 0; x != count; x++) {
+		if (pprange[x] == 0)
+			continue;
+		pprange[y++] = pprange[x];
+	}
+	count = y;
+
+	/* If there is only one range, nothing to do. */
+	if (count == 1) {
+		delete [] prange;
+		delete [] pprange;
+		return (false);
+	}
+
+	/* Sort the elements by range to optimize searching. */
+	mergesort(pprange, count, sizeof(pprange[0]), &hprsat_compare_range);
+
+	/*
+	 * Reset combination and compute number
+	 * of total combinations.
+	 */
+	hprsat_val_t ncombo = 1;
+
+	for (x = 0; x != count - 1; x++) {
+		hprsat_range &r = *pprange[x];
+		r.combo = -r.num_neg;
+		ncombo *= r.num_pos + r.num_neg + 1;
+	}
+
+	/* Check if searching is out of bounds. */
+	if (ncombo > searchLimit) {
+		delete [] prange;
+		delete [] pprange;
+		return (false);
+	}
+
+	size_t nsol = 0;
+
+	while (true) {
+		hprsat_val_t sum = 0;
+
+		/* Sum up what we've got. */
+		for (x = 0; x != count - 1; x++) {
+			hprsat_range &r = *pprange[x];
+			sum += r.combo * r.step;
+		}
+
+		sum = - sum - bias;
+
+		/* Check if we found a valid combination. */
+		if (hprsat_within_range(sum, *pprange[count - 1])) {
+			if (nsol++ == 0) {
+				for (x = 0; x != count; x++) {
+					hprsat_range &r = *pprange[x];
+					r.num_res = r.combo;
+				}
+			} else {
+				for (x = 0; x != count; x++) {
+					hprsat_range &r = *pprange[x];
+					r.variable |= (r.num_res != r.combo);
+				}
+			}
+		}
+
+		/* Increment the state. */
+		for (x = 0; x != count - 1; x++) {
+			hprsat_range &r = *pprange[x];
+			if (r.combo == r.num_pos) {
+				r.combo = -r.num_neg;
+			} else {
+				r.combo++;
+				break;
+			}
+		}
+		if (x == count - 1)
+			break;
+	}
+
+	if (nsol == 0) {
+		std::cout << "# NO SOLUTIONS\n";
+		*xa = ADD(1);
+		delete [] prange;
+		delete [] pprange;
+		return (true);
+	}
+
+	ret = false;
+
+	/* Split the equations. */
+	for (x = 0; x != count; x++) {
+		hprsat_range &r = *pprange[x];
+
+		if (r.variable)
+			continue;
+
+		ret = true;
+		xn = new ADD();
+		for (pa = xa->first(); pa; pa = pn) {
+			pn = pa->next();
+			/* Skip constants. */
+			if (pa->vfirst() == 0 || pa->factor_lin == 0)
+				  continue;
+			/* Check if element belongs to the given range. */
+			if (hprsat_intersects(*pa, r))
+				pa->remove(&xa->head)->insert_tail(&xn->head);
+		}
+
+		/* Add "bias", if any. */
+		if (r.num_res != 0) {
+			bias = - r.num_res * r.step;
+			hprsat_do_global_modulus(bias);
+			(new MUL(bias))->insert_head(&xn->head);
+			/* Subract bias from remaining equation. */
+			(new MUL(bias))->negate().insert_head(&xa->head);
+		}
+		xn->sort().insert_tail(phead);
+	}
+
+	if (xa->sort().first() == 0)
+		delete xa->remove(phead);
+
+	delete [] prange;
+	delete [] pprange;
+	return (ret);
 }
 
 bool
-hprsat_elevate_add(ADD_HEAD_t *phead, bool ignoreNonZero)
+hprsat_elevate_add(ADD_HEAD_t *phead, size_t searchLimit)
 {
 	ADD_HEAD_t output;
 	ADD *xa;
+	ADD *xn;
 	bool any = false;
 
 	TAILQ_INIT(&output);
 
-	for (xa = TAILQ_FIRST(phead); xa; xa = xa->next()) {
-		hprsat_elevate_add(xa, &output, ignoreNonZero, any);
+	for (xa = TAILQ_FIRST(phead); xa; xa = xn) {
+		xn = xa->next();
+		xa->remove(phead)->insert_tail(&output);
+		any |= hprsat_elevate_add(xa, &output, searchLimit);
 	}
 
 	TAILQ_CONCAT(phead, &output, entry);
