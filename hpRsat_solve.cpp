@@ -101,6 +101,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 				else
 					delete xn;
 			}
+			hprsat_solve_simplify(&thead);
 		}
 
 		hprsat_free(&bhead[0]);
