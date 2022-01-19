@@ -78,7 +78,7 @@ hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &dst_which)
 	/* Do subtraction. */
 	for (MUL *pa = src.first(); pa; pa = pa->next())
 		(new MUL(*pa * mul))->negate().insert_tail(&dst.head);
-	dst.sort().doGCD();
+	dst.sort();
 	return (true);
 }
 
@@ -182,7 +182,7 @@ hprsat_simplify_add(ADD_HEAD_t *xhead, bool ignoreNonZero)
 	TAILQ_INIT(&leftover);
 
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
-		xa->sort().doGCD();
+		xa->sort();
 
 		for (pa = xa->first(); pa; pa = pa->next()) {
 			if (pa->isNegative())

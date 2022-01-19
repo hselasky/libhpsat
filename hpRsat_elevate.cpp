@@ -160,7 +160,7 @@ hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, bool ignoreNonZero, bool &any)
 
 			bias %= cur.value;
 
-			xn->sort().doGCD().insert_tail(phead);
+			xn->sort().insert_tail(phead);
 			any = true;
 		} else {
 			total_min += cur_min;

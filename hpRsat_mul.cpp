@@ -527,68 +527,6 @@ MUL :: zero()
 }
 
 MUL &
-MUL :: doGCD(const MUL &other)
-{
-	VAR *va;
-	VAR *vb;
-	VAR *vn;
-
-	ADD *aa;
-	ADD *ab;
-	ADD *an;
-
-	factor_lin = gcd(abs(factor_lin), abs(other.factor_lin));
-	factor_sqrt = gcd(abs(factor_sqrt), abs(other.factor_sqrt));
-
-	va = vfirst();
-	vb = other.vfirst();
-
-	while (va && vb) {
-		int ret = va->compare(*vb);
-		if (ret < 0) {
-			vn = va->next();
-			delete va->remove(&vhead);
-			va = vn;
-		} else if (ret == 0) {
-			va = va->next();
-			vb = vb->next();
-		} else {
-			vb = vb->next();
-		}
-	}
-
-	while (va) {
-		vn = va->next();
-		delete va->remove(&vhead);
-		va = vn;
-	}
-
-	aa = afirst();
-	ab = other.afirst();
-
-	while (aa && ab) {
-		int ret = aa->compare(*ab);
-		if (ret < 0) {
-			an = aa->next();
-			delete aa->remove(&ahead);
-			aa = an;
-		} else if (ret == 0) {
-			aa = aa->next();
-			ab = ab->next();
-		} else {
-			ab = ab->next();
-		}
-	}
-
-	while (aa) {
-		an = aa->next();
-		delete aa->remove(&ahead);
-		aa = an;
-	}
-	return (*this);
-}
-
-MUL &
 MUL :: operator /=(const MUL &other)
 {
 	VAR *va;

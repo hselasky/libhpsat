@@ -239,7 +239,6 @@ public:
 	MUL & operator *=(const MUL &other);
 	MUL & operator /=(const MUL &other);
 	MUL & zero();
-	MUL & doGCD(const MUL &);
 
 	MUL operator /(const MUL &other) const {
 		MUL temp(*this);
@@ -385,7 +384,6 @@ public:
 		pn->insert_tail(&head);
 		return (*this);
 	};
-	ADD & doGCD();
 
 	bool isVariable() const {
 		for (MUL *pa = first(); pa; pa = pa->next()) {
