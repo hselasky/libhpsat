@@ -702,6 +702,12 @@ extern void hprsat_fft_mul(const CADD *, const CADD *, CADD *, uint8_t);
 
 extern int hprsat_parse(std::istream &, ADD_HEAD_t *, hprsat_var_t *, bool = false);
 
+/* prime functions */
+
+extern hprsat_val_t hprsat_global_modulus;
+extern void hprsat_set_global_modulus(ADD_HEAD_t *);
+extern void hprsat_do_global_modulus(hprsat_val_t &);
+
 /* simplify functions */
 
 extern bool hprsat_simplify_add(ADD_HEAD_t *, bool = false);
