@@ -33,6 +33,21 @@ hprsat_solve_simplify(ADD_HEAD_t *xhead, bool useProbability = false)
 		;
 }
 
+static void
+hprsat_sort_head(ADD_HEAD_t *ahead, ADD_HEAD_t *bhead)
+{
+	ADD *pa = TAILQ_FIRST(ahead);
+	ADD *pb = TAILQ_FIRST(bhead);
+
+	while (pa && pb) {
+		pa = pa->next();
+		pb = pb->next();
+	}
+
+	if (pa != 0)
+		TAILQ_SWAP(ahead, bhead, ADD, entry);
+}
+
 bool
 hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool useProbability)
 {
@@ -74,6 +89,8 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 
 		hprsat_solve_simplify(&bhead[0]);
 		hprsat_solve_simplify(&bhead[1]);
+
+		hprsat_sort_head(&bhead[0], &bhead[1]);
 
 		/* Compute the variable conflict. */
 		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
