@@ -557,6 +557,7 @@ public:
 			pa->expand_all(pvar);
 		return (sort());
 	};
+	ADD & align();
 };
 
 extern hprsat_var_t hprsat_maxvar(const ADD_HEAD_t *, hprsat_var_t = HPRSAT_VAR_MAX);

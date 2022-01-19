@@ -274,3 +274,25 @@ ADD :: getConst(bool &isNaN, bool doSqrt) const
 	isNaN = false;
 	return (value);
 }
+
+ADD &
+ADD :: align()
+{
+	hprsat_val_t value;
+
+	if (last() == 0)
+		goto done;
+
+	hprsat_do_global_inverse(last()->factor_lin, value);
+
+	if (value == 0)
+		goto done;
+
+	for (MUL *pa = first(); pa; pa = pa->next()) {
+		pa->factor_lin *= value;
+		hprsat_do_global_modulus(pa->factor_lin);
+		hprsat_do_global_sign(pa->factor_lin);
+	}
+done:
+	return (*this);
+}
