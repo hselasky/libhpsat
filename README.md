@@ -82,4 +82,28 @@ v2*v5 - 0
 EOF
 </pre>
 
+### Example 7
+Binary AND :: v2 = v1 & v0
+<pre>
+cat << EOF | hpRsolve -vc
+v2 - v1 * v0
+EOF
+</pre>
+
+### Example 8
+Binary XOR :: v2 = v1 ^ v0
+<pre>
+cat << EOF | hpRsolve -vc
+v2 - v0 - v1 + (2 * v1 * v0)
+EOF
+</pre>
+
+### Example 9
+Binary OR :: v2 = v1 | v0
+<pre>
+cat << EOF | hpRsolve -vc
+v2 - v0 - v1 + (v1 * v0)
+EOF
+</pre>
+
 --HPS
