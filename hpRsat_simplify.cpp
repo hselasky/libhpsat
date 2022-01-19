@@ -1,4 +1,4 @@
- /*-
+/*-
  * Copyright (c) 2021-2022 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,6 +81,21 @@ hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &dst_which)
 		(new MUL(*pa * mul))->negate().insert_tail(&dst.head);
 	dst.sort();
 	return (true);
+}
+
+static bool
+hprsat_simplify_subtract_all(const ADD &src, ADD &dst)
+{
+	bool any = false;
+top:
+	/* Scan elements in reverse order. */
+	for (MUL *pa = dst.last(); pa; pa = pa->prev()) {
+		if (hprsat_simplify_subtract_gcd(src, dst, *pa)) {
+			any = true;
+			goto top;
+		}
+	}
+	return (any);
 }
 
 static ssize_t
@@ -168,7 +183,6 @@ hprsat_simplify_add(ADD_HEAD_t *xhead, bool ignoreNonZero)
 	ADD *xn;
 
 	MUL *pa;
-	MUL *pb;
 
 	ssize_t index;
 
@@ -257,11 +271,7 @@ repeat_0:
 			if (xb == 0)
 				continue;
 
-			/* Scan elements in reverse order. */
-			for (pb = xb->last(); pb; pb = pb->prev()) {
-
-				if (hprsat_simplify_subtract_gcd(*xa, *xb, *pb) == false)
-					continue;
+			if (hprsat_simplify_subtract_all(*xa, *xb)) {
 
 				/* Need to re-hash. */
 				plast[y] = 0;
