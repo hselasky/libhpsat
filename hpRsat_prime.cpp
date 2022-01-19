@@ -48,6 +48,7 @@ public:
 };
 
 hprsat_val_t hprsat_global_modulus;
+hprsat_val_t hprsat_global_exponent;
 static hprsat_prime_head_t hprsat_prime_head = TAILQ_HEAD_INITIALIZER(hprsat_prime_head);
 
 static void
@@ -85,7 +86,7 @@ hprsat_set_global_modulus(ADD_HEAD_t *phead)
 	hprsat_global_modulus = 2;
 
 	/*
-	 * Compute a prime number big-enough to hold the range:
+	 * Compute a prime number big-enough to hold the complete range:
 	 */
 	hprsat_val_t counter = 1;
 top:
@@ -128,6 +129,9 @@ top:
 
 	/* Get our prime. */
 	hprsat_global_modulus++;
+
+	/* Set global exponent. */
+	hprsat_global_exponent = hprsat_global_modulus - 2;
 }
 
 void
@@ -138,4 +142,12 @@ hprsat_do_global_modulus(hprsat_val_t &val)
 		if (val < 0)
 			val += hprsat_global_modulus;
 	}
+}
+
+void
+hprsat_do_global_inverse(const hprsat_val_t &val, hprsat_val_t &r)
+{
+	mpz_powm(r.get_mpz_t(), val.get_mpz_t(),
+		 hprsat_global_exponent.get_mpz_t(),
+		 hprsat_global_modulus.get_mpz_t());
 }
