@@ -68,7 +68,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 				/* Expand variable. */
 				(new ADD(*xa))->insert_tail(&bhead[0]).expand(v, false);
 				(new ADD(*xa))->insert_tail(&bhead[1]).expand(v, true);
-				xa->remove(xhead)->insert_tail(&ahead);
+				xa->remove(xhead)->align().insert_tail(&ahead);
 			}
 		}
 
