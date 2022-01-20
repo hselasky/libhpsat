@@ -230,7 +230,8 @@ ADD :: operator *(const ADD &other) const
 	MUL *paa = first();
 	MUL *pbb = other.first();
 
-	hprsat_sort_head(&paa, &pbb);
+	if (paa != pbb)
+		hprsat_sort_head(&paa, &pbb);
 
 	/* Standard multiplication. */
 	for (MUL *pa = paa; pa; pa = pa->next()) {
