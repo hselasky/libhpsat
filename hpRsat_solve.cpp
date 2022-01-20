@@ -63,8 +63,11 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 	std::cout << "# MODULUS " << hprsat_global_modulus << "\n";
 
 	/* Convert everything to binary equations. */
-	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next())
-		xa->toBinary();
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+		if (xa->toBinary().first() == 0)
+			delete xa->remove(xhead);
+	}
 
 	hprsat_solve_simplify(xhead, useProbability);
 
