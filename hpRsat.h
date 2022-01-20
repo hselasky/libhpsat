@@ -682,6 +682,10 @@ extern size_t hprsat_solve_count(ADD_HEAD_t *, uint8_t *);
 extern bool hprsat_solve_callback(ADD *, uint8_t *, hprsat_solve_callback_t *, void *);
 extern void hprsat_underiv(ADD_HEAD_t *, ADD_HEAD_t *);
 
+/* CNF functions */
+
+extern int hprsat_loadcnf(std::istream &, ADD_HEAD_t *, hprsat_var_t *, hprsat_var_t *);
+
 /* digraph functions */
 
 extern void hprsat_print_digraph(std::ostream &, ADD_HEAD_t *);
