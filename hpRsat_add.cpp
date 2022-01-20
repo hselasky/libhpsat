@@ -374,9 +374,11 @@ ADD :: xform_fwd(hprsat_var_t v)
 	MUL_HEAD_t temp;
 	TAILQ_INIT(&temp);
 
+	MUL mv(1, v);
+
 	for (MUL *pa = first(); pa; pa = pa->next()) {
 		if (!pa->contains(v))
-			(new MUL(*pa * MUL(1,v)))->insert_tail(&temp);
+			(new MUL(*pa * mv))->insert_tail(&temp);
 	}
 	TAILQ_CONCAT(&head, &temp, entry);
 	return (sort());
@@ -388,9 +390,11 @@ ADD :: xform_inv(hprsat_var_t v)
 	MUL_HEAD_t temp;
 	TAILQ_INIT(&temp);
 
+	MUL mv(-1, v);
+
 	for (MUL *pa = first(); pa; pa = pa->next()) {
 		if (!pa->contains(v))
-			(new MUL(*pa * MUL(1,v)))->negate().insert_tail(&temp);
+			(new MUL(*pa * mv))->insert_tail(&temp);
 	}
 	TAILQ_CONCAT(&head, &temp, entry);
 	return (sort());
