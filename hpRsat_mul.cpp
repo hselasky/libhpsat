@@ -177,15 +177,6 @@ MUL :: sort(MUL_HEAD_t *phead)
 	return (*this);
 }
 
-MUL :: MUL(const ADD &other)
-{
-	TAILQ_INIT(&vhead);
-	TAILQ_INIT(&ahead);
-	factor_lin = 1;
-	factor_sqrt = 1;
-	other.dup()->insert_tail(&ahead);
-}
-
 MUL :: ~MUL()
 {
 	hprsat_free(&vhead);

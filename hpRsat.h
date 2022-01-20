@@ -189,7 +189,6 @@ public:
 		TAILQ_INIT(&ahead);
 		*this = other;
 	};
-	MUL(const ADD &other);
 
 	MUL(hprsat_val_t _factor, hprsat_var_t _var = HPRSAT_VAR_MIN) {
 		TAILQ_INIT(&vhead);

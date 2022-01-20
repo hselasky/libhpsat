@@ -118,27 +118,24 @@ static bool
 hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool = false);
 
 static bool
-hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
+hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
 {
 	if (line[offset] == '!' &&
 	    line[offset + 1] == 'v') {
 		offset += 2;
-		MUL var(1, hprsat_read_size_value(line, offset));
+		output = !ADD(1, hprsat_read_size_value(line, offset));
 		hprsat_skip_space(line, offset);
-		output *= !ADD(var);
 		return (false);
 	} else if (line[offset] == 'v') {
 		offset++;
-		MUL var(1, hprsat_read_size_value(line, offset));
+		output = ADD(1, hprsat_read_size_value(line, offset));
 		hprsat_skip_space(line, offset);
-		output *= ADD(var);
 		return (false);
 	} else if ((line[offset] >= '0' && line[offset] <= '9') ||
 		   (line[offset] == '-' &&
 		    line[offset+1] >= '0' && line[offset+1] <= '9')) {
-		MUL var(hprsat_read_value(line, offset));
+		output = ADD(hprsat_read_value(line, offset));
 		hprsat_skip_space(line, offset);
-		output *= ADD(var);
 		return (false);
 	} else if (line[offset] == 's' &&
 		   line[offset+1] == 'q' &&
@@ -152,15 +149,13 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
 		if (hprsat_parse_add(line, offset, temp))
 			return (true);
 		temp.dup()->insert_tail(&var.ahead);
-		output *= ADD(var);
+		output = ADD(var);
 		return (false);
 	} else if (line[offset] == 'c' &&
 		   line[offset+1] == 'o' &&
 		   line[offset+2] == 's' &&
 		   line[offset+3] == '(') {
 		double phase;
-		MUL var;
-		ADD temp;
 
 		offset += 4;
 		phase = hprsat_read_double_value(line, offset);
@@ -172,19 +167,13 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
 
 		phase -= floor(phase);
 
-		temp = hprsat_cos_32(phase * (1ULL << 32));
-		temp *= temp;
-		temp.dup()->insert_tail(&var.ahead);
-
-		output *= ADD(var);
+		output = hprsat_cos_32(phase * (1ULL << 32));
 		return (false);
 	} else if (line[offset] == 's' &&
 		   line[offset+1] == 'i' &&
 		   line[offset+2] == 'n' &&
 		   line[offset+3] == '(') {
 		double phase;
-		MUL var;
-		ADD temp;
 
 		offset += 4;
 		phase = hprsat_read_double_value(line, offset);
@@ -196,11 +185,7 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
 
 		phase -= floor(phase);
 
-		temp = hprsat_sin_32(phase * (1ULL << 32));
-		temp *= temp;
-		temp.dup()->insert_tail(&var.ahead);
-
-		output *= ADD(var);
+		output = hprsat_sin_32(phase * (1ULL << 32));
 		return (false);
 	} else {
 		return (true);
@@ -237,14 +222,8 @@ hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool haveAll)
 			if (hprsat_parse_add(line, offset, temp[0]))
 				return (true);
 		} else {
-			MUL *pa = new MUL(1);
-
-			if (hprsat_parse_single_mul(line, offset, *pa)) {
-				delete pa;
+			if (hprsat_parse_single_mul(line, offset, temp[0]))
 				return (true);
-			}
-
-			pa->insert_tail(&temp[0].head);
 		}
 
 		/* Insert the sign, if any. */

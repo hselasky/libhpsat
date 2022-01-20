@@ -146,7 +146,7 @@ hprsat_fft_inv(CADD *ptr, uint8_t log2_size, bool doBitreverse)
 	hprsat_val_t factor = 1;
 	factor <<= 2 * log2_size;
 
-	ADD div(factor);
+	MUL div(factor);
 
 	for (size_t x = 0; x != max; x++) {
 		for (MUL *pa = ptr[x].x.first(); pa; pa = pa->next())
