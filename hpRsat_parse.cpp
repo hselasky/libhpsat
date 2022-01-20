@@ -120,18 +120,25 @@ hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool = false);
 static bool
 hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
 {
-	if (line[offset] == 'v') {
+	if (line[offset] == '!' &&
+	    line[offset + 1] == 'v') {
+		offset += 2;
+		MUL var(1, hprsat_read_size_value(line, offset));
+		hprsat_skip_space(line, offset);
+		output *= !ADD(var);
+		return (false);
+	} else if (line[offset] == 'v') {
 		offset++;
 		MUL var(1, hprsat_read_size_value(line, offset));
 		hprsat_skip_space(line, offset);
-		output *= var;
+		output *= ADD(var);
 		return (false);
 	} else if ((line[offset] >= '0' && line[offset] <= '9') ||
 		   (line[offset] == '-' &&
 		    line[offset+1] >= '0' && line[offset+1] <= '9')) {
 		MUL var(hprsat_read_value(line, offset));
 		hprsat_skip_space(line, offset);
-		output *= var;
+		output *= ADD(var);
 		return (false);
 	} else if (line[offset] == 's' &&
 		   line[offset+1] == 'q' &&
@@ -145,7 +152,7 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
 		if (hprsat_parse_add(line, offset, temp))
 			return (true);
 		temp.dup()->insert_tail(&var.ahead);
-		output *= var;
+		output *= ADD(var);
 		return (false);
 	} else if (line[offset] == 'c' &&
 		   line[offset+1] == 'o' &&
@@ -169,7 +176,7 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
 		temp *= temp;
 		temp.dup()->insert_tail(&var.ahead);
 
-		output *= var;
+		output *= ADD(var);
 		return (false);
 	} else if (line[offset] == 's' &&
 		   line[offset+1] == 'i' &&
@@ -193,7 +200,7 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, MUL &output)
 		temp *= temp;
 		temp.dup()->insert_tail(&var.ahead);
 
-		output *= var;
+		output *= ADD(var);
 		return (false);
 	} else {
 		return (true);
