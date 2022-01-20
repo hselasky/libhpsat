@@ -408,6 +408,39 @@ public:
 	};
 	ADD operator *(const ADD &other) const;
 
+	/*
+	 * LOGIC operators, AND, OR, XOR and NOT.
+	 */
+	ADD & operator &=(const ADD &other) {
+		*this = *this & other;
+		return (*this);
+	};
+	ADD operator &(const ADD &other) const {
+		return (*this * other);
+	};
+
+	ADD & operator |=(const ADD &other) {
+		*this = *this | other;
+		return (*this);
+	};
+	ADD operator |(const ADD &other) const {
+		return (*this + other - *this * other);
+	};
+
+	ADD & operator ^=(const ADD &other) {
+		*this = *this ^ other;
+		return (*this);
+	};
+	ADD operator ^(const ADD &other) const {
+		return (*this + other - (ADD(2) * *this * other));
+	};
+
+	ADD operator !() const {
+		return (ADD(1) - *this);
+	};
+
+	ADD & toBinary();
+
 	bool contains(hprsat_var_t var) const {
 		for (MUL *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
 			if (pa->contains(var))

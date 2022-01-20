@@ -296,3 +296,22 @@ ADD :: align()
 done:
 	return (*this);
 }
+
+ADD &
+ADD :: toBinary()
+{
+	hprsat_val_t exp = hprsat_global_modulus - 1;
+	ADD temp;
+
+	TAILQ_CONCAT(&temp.head, &head, entry);
+
+	*this = ADD(1);
+
+	while (exp != 0) {
+		if ((exp & 1) != 0)
+			*this *= temp;
+		temp *= temp;
+		exp /= 2;
+	}
+	return (*this);
+}
