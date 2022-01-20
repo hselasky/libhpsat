@@ -294,7 +294,7 @@ repeat_0:
 		TAILQ_CONCAT(xhead, &leftover, entry);
 		return (true);
 	}
-
+#if 0
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
 
 		/* Ignore all single variable statements. */
@@ -311,6 +311,7 @@ repeat_0:
 			}
 		}
 	}
+#endif
 	return (any);
 
 err_non_zero:
