@@ -332,7 +332,7 @@ ADD :: align()
 {
 	hprsat_val_t value;
 
-	if (last() == 0)
+	if (last() == 0 || hprsat_global_modulus == 0)
 		goto done;
 
 	hprsat_do_global_inverse(last()->factor_lin, value);
