@@ -208,17 +208,37 @@ done:
 	return (did_sort);
 }
 
+static void
+hprsat_sort_head(MUL **ppa, MUL **ppb)
+{
+	MUL *pa = *ppa;
+	MUL *pb = *ppb;
+
+	while (pa && pb) {
+		pa = pa->next();
+		pb = pb->next();
+	}
+
+	if (pa != 0)
+		HPRSAT_SWAP(*ppa, *ppb);
+}
+
 ADD
 ADD :: operator *(const ADD &other) const
 {
 	ADD temp;
+	MUL *paa = first();
+	MUL *pbb = other.first();
+
+	hprsat_sort_head(&paa, &pbb);
 
 	/* Standard multiplication. */
-	for (MUL *pa = first(); pa; pa = pa->next()) {
-		for (MUL *pb = other.first(); pb; pb = pb->next())
+	for (MUL *pa = paa; pa; pa = pa->next()) {
+		for (MUL *pb = pbb; pb; pb = pb->next())
 			(new MUL(pa[0] * pb[0]))->insert_tail(&temp.head);
+		temp.sort();
 	}
-	return (temp.sort());
+	return (temp);
 }
 
 bool
