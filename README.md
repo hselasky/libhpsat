@@ -106,4 +106,10 @@ v2 - v0 - v1 + (v1 * v0)
 EOF
 </pre>
 
+### Example 10
+Find solution to a problem described by a CNF file:
+<pre>
+cat problem.cnf | hpRsolve -vC
+</pre>
+
 --HPS
