@@ -37,11 +37,11 @@ static size_t nsol;
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: cat xxx.txt | hpRsolve [-c] [-P] [-u <N>] [-v] [-H] [-h]\n");
+	fprintf(stderr, "Usage: cat xxx.txt | hpRsolve [-c] [-C] [-P] [-u <N>] [-v] [-H] [-h]\n");
 }
 
 static bool
-solve_callback(void *arg, uint8_t *psol)
+solve_callback_hpr(void *arg, uint8_t *psol)
 {
 	printf("# SATISFIABLE\n");
 
@@ -56,6 +56,22 @@ solve_callback(void *arg, uint8_t *psol)
 	return (true);
 }
 
+static bool
+solve_callback_cnf(void *arg, uint8_t *psol)
+{
+	printf("s SATISFIABLE\n" "v ");
+
+	for (hprsat_var_t x = 1; x < vm; x++) {
+		printf("%zd ", psol[x] ? x : - x);
+		if (x && (x % 16) == 0)
+			printf("\nv ");
+	}
+	printf("0\n");
+	nsol++;
+
+	return (true);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -64,14 +80,18 @@ main(int argc, char **argv)
 	bool count = false;
 	bool digraph = false;
 	bool probability = false;
+	bool cnf = false;
 	int underiv = 0;
 
 	signal(SIGPIPE, SIG_IGN);
 
-	while ((c = getopt(argc, argv, "chHPu:v")) != -1) {
+	while ((c = getopt(argc, argv, "cChHPu:v")) != -1) {
 		switch (c) {
 		case 'c':
 			count = true;
+			break;
+		case 'C':
+			cnf = true;
 			break;
 		case 'H':
 			digraph = true;
@@ -99,9 +119,16 @@ main(int argc, char **argv)
 
 	uint8_t *psol = 0;
 
-	if (hprsat_parse(std::cin, &ahead, &vm, verbose) != 0) {
-		fprintf(stderr, "Failed to load input\n");
-		return (1);
+	if (cnf) {
+		if (hprsat_loadcnf(std::cin, &ahead, 0, &vm) != 0) {
+			fprintf(stderr, "Failed to load CNF input\n");
+				return (1);
+		}
+	} else {
+		if (hprsat_parse(std::cin, &ahead, &vm, verbose) != 0) {
+			fprintf(stderr, "Failed to load input\n");
+			return (1);
+		}
 	}
 
 	while (1) {
@@ -126,9 +153,13 @@ main(int argc, char **argv)
 			goto skip;
 		}
 
-		solve_callback(0, psol);
+		if (cnf)
+			solve_callback_cnf(0, psol);
+		else
+			solve_callback_hpr(0, psol);
 	} else {
-		hprsat_solve_callback(TAILQ_FIRST(&xhead), psol, &solve_callback, 0);
+		hprsat_solve_callback(TAILQ_FIRST(&xhead), psol,
+		    cnf ? &solve_callback_cnf : &solve_callback_hpr, 0);
 
 		printf("# SOLUTIONS %zu\n", nsol);
 	}
