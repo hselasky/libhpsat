@@ -208,30 +208,60 @@ done:
 	return (did_sort);
 }
 
-static void
-hprsat_sort_head(MUL **ppa, MUL **ppb)
-{
-	MUL *pa = *ppa;
-	MUL *pb = *ppb;
-
-	while (pa && pb) {
-		pa = pa->next();
-		pb = pb->next();
-	}
-
-	if (pa != 0)
-		HPRSAT_SWAP(*ppa, *ppb);
-}
-
 ADD
 ADD :: operator *(const ADD &other) const
 {
+#if 1
+	/*
+	 * Speedup multiplication by use of transform.
+	 */
+	ADD ta(*this);
+	ADD tb(other);
+	ADD tc;
+
+	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
+		hprsat_var_t va = ta.maxVar(v);
+		hprsat_var_t vb = tb.maxVar(v);
+
+		v = (va > vb) ? va : vb;
+		if (v == HPRSAT_VAR_MIN)
+			break;
+
+		ta.xform_fwd(v);
+		tb.xform_fwd(v);
+	}
+
+	MUL *pa = ta.first();
+	MUL *pb = tb.first();
+
+	while (pa && pb) {
+		int ret = pa->compare(*pb, HPRSAT_CMP_NLF);
+		if (ret == 0) {
+			(new MUL(*pa * *pb))->insert_tail(&tc.head);
+			pa = pa->next();
+			pb = pb->next();
+		} else if (ret > 0) {
+			pb = pb->next();
+		} else {
+			pa = pa->next();
+		}
+	}
+
+	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
+		hprsat_var_t va = ta.maxVar(v);
+		hprsat_var_t vb = tb.maxVar(v);
+
+		v = (va > vb) ? va : vb;
+		if (v == HPRSAT_VAR_MIN)
+			break;
+
+		tc.xform_inv(v);
+	}
+	return (tc);
+#else
 	ADD temp;
 	MUL *paa = first();
 	MUL *pbb = other.first();
-
-	if (paa != pbb)
-		hprsat_sort_head(&paa, &pbb);
 
 	/* Standard multiplication. */
 	for (MUL *pa = paa; pa; pa = pa->next()) {
@@ -240,6 +270,7 @@ ADD :: operator *(const ADD &other) const
 		temp.sort();
 	}
 	return (temp);
+#endif
 }
 
 bool
@@ -335,4 +366,32 @@ ADD :: toBinary()
 		exp /= 2;
 	}
 	return (*this);
+}
+
+ADD &
+ADD :: xform_fwd(hprsat_var_t v)
+{
+	MUL_HEAD_t temp;
+	TAILQ_INIT(&temp);
+
+	for (MUL *pa = first(); pa; pa = pa->next()) {
+		if (!pa->contains(v))
+			(new MUL(*pa * MUL(1,v)))->insert_tail(&temp);
+	}
+	TAILQ_CONCAT(&head, &temp, entry);
+	return (sort());
+}
+
+ADD &
+ADD :: xform_inv(hprsat_var_t v)
+{
+	MUL_HEAD_t temp;
+	TAILQ_INIT(&temp);
+
+	for (MUL *pa = first(); pa; pa = pa->next()) {
+		if (!pa->contains(v))
+			(new MUL(*pa * MUL(1,v)))->negate().insert_tail(&temp);
+	}
+	TAILQ_CONCAT(&head, &temp, entry);
+	return (sort());
 }

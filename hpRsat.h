@@ -590,6 +590,8 @@ public:
 		return (sort());
 	};
 	ADD & align();
+	ADD & xform_fwd(hprsat_var_t);
+	ADD & xform_inv(hprsat_var_t);
 };
 
 extern hprsat_var_t hprsat_maxvar(const ADD_HEAD_t *, hprsat_var_t = HPRSAT_VAR_MAX);
