@@ -220,8 +220,8 @@ ADD :: operator *(const ADD &other) const
 	ADD tc;
 
 	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
-		hprsat_var_t va = ta.maxVar(v);
-		hprsat_var_t vb = tb.maxVar(v);
+		hprsat_var_t va = maxVar(v);
+		hprsat_var_t vb = other.maxVar(v);
 
 		v = (va > vb) ? va : vb;
 		if (v == HPRSAT_VAR_MIN)
@@ -248,8 +248,8 @@ ADD :: operator *(const ADD &other) const
 	}
 
 	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
-		hprsat_var_t va = ta.maxVar(v);
-		hprsat_var_t vb = tb.maxVar(v);
+		hprsat_var_t va = maxVar(v);
+		hprsat_var_t vb = other.maxVar(v);
 
 		v = (va > vb) ? va : vb;
 		if (v == HPRSAT_VAR_MIN)
@@ -353,11 +353,20 @@ ADD &
 ADD :: toBinary()
 {
 #if 1
+	ADD vars;
+
+	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
+		v = maxVar(v);
+		if (v == HPRSAT_VAR_MIN)
+			break;
+		(new MUL(1,v))->insert_tail(&vars.head);
+	}
+
 	/*
 	 * Use transform to compute result quickly.
 	 */
 	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
-		v = maxVar(v);
+		v = vars.maxVar(v);
 		if (v == HPRSAT_VAR_MIN)
 			break;
 		xform_fwd(v);
@@ -367,7 +376,7 @@ ADD :: toBinary()
 		pa->factor_lin = (pa->factor_lin != 0);
 
 	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
-		v = maxVar(v);
+		v = vars.maxVar(v);
 		if (v == HPRSAT_VAR_MIN)
 			break;
 		xform_inv(v);
