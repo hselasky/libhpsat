@@ -352,6 +352,28 @@ done:
 ADD &
 ADD :: toBinary()
 {
+#if 1
+	/*
+	 * Use transform to compute result quickly.
+	 */
+	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
+		v = maxVar(v);
+		if (v == HPRSAT_VAR_MIN)
+			break;
+		xform_fwd(v);
+	}
+
+	for (MUL *pa = first(); pa; pa = pa->next())
+		pa->factor_lin = (pa->factor_lin != 0);
+
+	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
+		v = maxVar(v);
+		if (v == HPRSAT_VAR_MIN)
+			break;
+		xform_inv(v);
+	}
+	return (*this);
+#else
 	hprsat_val_t exp = hprsat_global_modulus - 1;
 	ADD temp;
 
@@ -366,6 +388,7 @@ ADD :: toBinary()
 		exp /= 2;
 	}
 	return (*this);
+#endif
 }
 
 ADD &
