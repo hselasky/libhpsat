@@ -365,22 +365,15 @@ ADD :: toBinary()
 	/*
 	 * Use transform to compute result quickly.
 	 */
-	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
-		v = vars.maxVar(v);
-		if (v == HPRSAT_VAR_MIN)
-			break;
-		xform_fwd(v);
-	}
+	for (MUL *pa = vars.first(); pa; pa = pa->next())
+		xform_fwd(pa->maxVar());
 
 	for (MUL *pa = first(); pa; pa = pa->next())
 		pa->factor_lin = (pa->factor_lin != 0);
 
-	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
-		v = vars.maxVar(v);
-		if (v == HPRSAT_VAR_MIN)
-			break;
-		xform_inv(v);
-	}
+	for (MUL *pa = vars.first(); pa; pa = pa->next())
+		xform_inv(pa->maxVar());
+
 	return (*this);
 #else
 	hprsat_val_t exp = hprsat_global_modulus - 1;
