@@ -79,7 +79,8 @@ hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &dst_which)
 	/* Do subtraction. */
 	for (MUL *pa = src.first(); pa; pa = pa->next())
 		(new MUL(*pa * mul))->negate().insert_tail(&dst.head);
-	dst.sort();
+
+	dst.sort().toBinary();
 	return (true);
 }
 
