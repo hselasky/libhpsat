@@ -41,12 +41,12 @@ usage(void)
 }
 
 static bool
-solve_callback_hpr(void *arg, uint8_t *psol)
+solve_callback_hpr(void *arg, hprsat_val_t *psol)
 {
 	printf("# SATISFIABLE\n");
 
 	for (hprsat_var_t x = 0; x < vm; x++) {
-		printf("v%zd=%d ", x, psol[x]);
+		printf("x%zd=%zd ", x, psol[x]);
 		if (x && (x % 16) == 0)
 			printf("\n");
 	}
@@ -57,7 +57,7 @@ solve_callback_hpr(void *arg, uint8_t *psol)
 }
 
 static bool
-solve_callback_cnf(void *arg, uint8_t *psol)
+solve_callback_cnf(void *arg, hprsat_val_t *psol)
 {
 	printf("s SATISFIABLE\n" "v ");
 
@@ -117,7 +117,7 @@ main(int argc, char **argv)
 	ADD_HEAD_t xhead;
 	TAILQ_INIT(&xhead);
 
-	uint8_t *psol = 0;
+	hprsat_val_t *psol = 0;
 
 	if (cnf) {
 		if (hprsat_loadcnf(std::cin, &ahead, 0, &vm) != 0) {
@@ -142,7 +142,7 @@ main(int argc, char **argv)
 		hprsat_underiv(&ahead, &xhead);
 	}
 
-	psol = new uint8_t [vm];
+	psol = new hprsat_val_t [vm];
 	memset(psol, 0, sizeof(psol[0]) * vm);
 
 	if (digraph) {

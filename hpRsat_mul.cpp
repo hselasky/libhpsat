@@ -358,14 +358,47 @@ MUL :: compare(const MUL & other, bool exprOnly) const
 }
 
 MUL &
-MUL :: expand(hprsat_var_t var, bool value)
+MUL :: expand(hprsat_var_t var, hprsat_val_t value)
 {
 	for (VAR *pa = vfirst(), *pb; pa; pa = pb) {
 		pb = pa->next();
 
-		if (pa->contains(var)) {
-			if (value == false)
-				factor_lin = 0;
+		if (pa->add != 0) {
+			pa->add->expand(var, value);
+		} else if (pa->var == var) {
+			const hprsat_pwr_t m = (hprsat_global_mod - 1) * HPRSAT_PWR_UNIT;
+
+			hprsat_pwr_t _exp;
+			hprsat_val_t _base;
+			hprsat_val_t _val = value;
+
+			_exp = pa->pwr;
+			if (_exp != 0) {
+				_exp = _exp % m;
+				if (_exp < 0)
+					_exp += m;
+				if (_exp == 0)
+					_exp = m;
+			}
+
+			if (_exp & HPRSAT_PWR_SQRT) {
+				_base = hprsat_global_sqrt[_val];
+				assert(_val == 0 || _base != 0);
+			} else {
+				_base = 1;
+			}
+
+			while (_exp >= HPRSAT_PWR_UNIT) {
+				if (_exp & HPRSAT_PWR_UNIT) {
+					_base *= _val;
+					_base %= hprsat_global_mod;
+				}
+				_exp /= 2;
+				_val *= _val;
+				_val %= hprsat_global_mod;
+			}
+			factor_lin *= _base;
+			factor_lin %= hprsat_global_mod;
 			delete pa->remove(&vhead);
 		}
 	}
@@ -373,14 +406,54 @@ MUL :: expand(hprsat_var_t var, bool value)
 }
 
 MUL &
-MUL :: expand_all(const uint8_t *pvar)
+MUL :: expand_all(const hprsat_val_t *pvar)
 {
-	for (VAR *pa = vfirst(); pa; pa = pa->next()) {
-		if (pvar[pa->var] == 0)
-			factor_lin = 0;
+	VAR *pa;
+	VAR *pn;
+
+	for (pa = vfirst(); pa; pa = pn) {
+		pn = pa->next();
+
+		if (pa->add != 0) {
+			pa->add->expand_all(pvar);
+		} else {
+			const hprsat_pwr_t m = (hprsat_global_mod - 1) * HPRSAT_PWR_UNIT;
+
+			hprsat_pwr_t _exp;
+			hprsat_val_t _base;
+			hprsat_val_t value = pvar[pa->var];
+
+			_exp = pa->pwr;
+			if (_exp != 0) {
+				_exp = _exp % m;
+				if (_exp < 0)
+					_exp += m;
+				if (_exp == 0)
+					_exp = m;
+			}
+
+			if (_exp & HPRSAT_PWR_SQRT) {
+				_base = hprsat_global_sqrt[value];
+				assert(value == 0 || _base != 0);
+			} else {
+				_base = 1;
+			}
+
+			while (_exp >= HPRSAT_PWR_UNIT) {
+				if (_exp & HPRSAT_PWR_UNIT) {
+					_base *= value;
+					_base %= hprsat_global_mod;
+				}
+				_exp /= 2;
+				value *= value;
+				value %= hprsat_global_mod;
+			}
+			factor_lin *= _base;
+			factor_lin %= hprsat_global_mod;
+			delete pa->remove(&vhead);
+		}
 	}
-	hprsat_free(&vhead);
-	return (*this);
+	return (sort());
 }
 
 MUL &

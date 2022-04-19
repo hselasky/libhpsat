@@ -272,8 +272,8 @@ public:
 	};
 	size_t count() const;
 	MUL & sort();
-	MUL & expand(hprsat_var_t var, bool value);
-	MUL & expand_all(const uint8_t *);
+	MUL & expand(hprsat_var_t, hprsat_val_t);
+	MUL & expand_all(const hprsat_val_t *);
 };
 
 extern hprsat_var_t hprsat_maxvar(const MUL_HEAD_t *, hprsat_var_t = HPRSAT_VAR_MAX);
@@ -515,12 +515,12 @@ public:
 		else
 			return (true);
 	};
-	ADD & expand(hprsat_var_t var, bool value) {
+	ADD & expand(hprsat_var_t var, hprsat_val_t value) {
 		for (MUL *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
 			pa->expand(var, value);
 		return (sort());
 	};
-	ADD & expand_all(const uint8_t *pvar) {
+	ADD & expand_all(const hprsat_val_t *pvar) {
 		for (MUL *pa = TAILQ_FIRST(&head); pa; pa = pa->next())
 			pa->expand_all(pvar);
 		return (sort());
@@ -612,12 +612,12 @@ public:
 
 /* solve functions */
 
-typedef bool (hprsat_solve_callback_t)(void *, uint8_t *);
+typedef bool (hprsat_solve_callback_t)(void *, hprsat_val_t *);
 
 extern bool hprsat_solve(ADD_HEAD_t *, ADD_HEAD_t *, hprsat_var_t *, bool = false);
-extern bool hprsat_solve_first(ADD_HEAD_t *, uint8_t *, bool = false);
-extern size_t hprsat_solve_count(ADD_HEAD_t *, uint8_t *);
-extern bool hprsat_solve_callback(ADD *, uint8_t *, hprsat_solve_callback_t *, void *);
+extern bool hprsat_solve_first(ADD_HEAD_t *, hprsat_val_t *, bool = false);
+extern size_t hprsat_solve_count(ADD_HEAD_t *, hprsat_val_t *);
+extern bool hprsat_solve_callback(ADD *, hprsat_val_t *, hprsat_solve_callback_t *, void *);
 extern void hprsat_underiv(ADD_HEAD_t *, ADD_HEAD_t *);
 
 /* CNF functions */

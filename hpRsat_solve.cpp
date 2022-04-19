@@ -80,48 +80,62 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 		xa->print(); std::cout << "\n";
 	}
 
+	ADD_HEAD_t bhead[hprsat_global_mod];
+
+	for (hprsat_val_t z = 0; z != hprsat_global_mod; z++)
+		TAILQ_INIT(&bhead[z]);
+
 	for (hprsat_var_t v = 0; v != vm; v++) {
 
 		printf("# PROGRESS v%zd of %zd\n", v, vm);
 
 		ADD_HEAD_t ahead;
-		ADD_HEAD_t bhead[2];
 		ADD_HEAD_t thead;
+		ADD_HEAD_t uhead;
 
 		TAILQ_INIT(&ahead);
-		TAILQ_INIT(&bhead[0]);
-		TAILQ_INIT(&bhead[1]);
 		TAILQ_INIT(&thead);
+		TAILQ_INIT(&uhead);
 
 		for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
 			xn = xa->next();
 			if (xa->contains(v)) {
 				/* Expand variable. */
-				(new ADD(*xa))->insert_tail(&bhead[0]).expand(v, false);
-				(new ADD(*xa))->insert_tail(&bhead[1]).expand(v, true);
+				for (hprsat_val_t z = 0; z != hprsat_global_mod; z++)
+					(new ADD(*xa))->insert_tail(&bhead[z]).expand(v, z).sort();
 				xa->remove(xhead)->align().insert_tail(&ahead);
 			}
 		}
 
-		hprsat_solve_simplify(&bhead[0]);
-		hprsat_solve_simplify(&bhead[1]);
+		for (hprsat_val_t z = 0; z != hprsat_global_mod; z++)
+			hprsat_solve_simplify(&bhead[z]);
 
-		hprsat_sort_head(&bhead[0], &bhead[1]);
-
-		/* Compute the variable conflict. */
-		for (xa = TAILQ_FIRST(&bhead[0]); xa != 0; xa = xa->next()) {
-			for (xb = TAILQ_FIRST(&bhead[1]); xb != 0; xb = xb->next()) {
-				xn = new ADD(xa[0] * xb[0]);
-				if (xn->isNonZeroVariable())
-					xn->insert_tail(&thead);
-				else
-					delete xn;
+		for (hprsat_val_t z = 0; z != hprsat_global_mod; z++) {
+			for (hprsat_val_t t = z + 1; t != hprsat_global_mod; t++) {
+				hprsat_sort_head(&bhead[z], &bhead[t]);
 			}
-			hprsat_solve_simplify(&thead);
 		}
 
-		hprsat_free(&bhead[0]);
-		hprsat_free(&bhead[1]);
+		(new ADD(1))->insert_tail(&thead);
+
+		/* Compute the variable conflict. */
+		for (hprsat_val_t z = 0; z != hprsat_global_mod; z++) {
+			for (xa = TAILQ_FIRST(&bhead[z]); xa != 0; xa = xa->next()) {
+				for (xb = TAILQ_FIRST(&thead); xb != 0; xb = xb->next()) {
+					xn = new ADD(xa[0] * xb[0]);
+					if (xn->isNonZeroVariable())
+						xn->insert_tail(&uhead);
+					else
+						delete xn;
+				}
+			}
+			hprsat_free(&thead);
+			hprsat_free(&bhead[z]);
+
+			TAILQ_CONCAT(&thead, &uhead, entry);
+
+			hprsat_solve_simplify(&thead);
+		}
 
 		if (TAILQ_FIRST(&thead)) {
 			TAILQ_CONCAT(xhead, &thead, entry);
@@ -138,7 +152,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 }
 
 bool
-hprsat_solve_callback(ADD *xm, uint8_t *psol, hprsat_solve_callback_t *cb, void *arg)
+hprsat_solve_callback(ADD *xm, hprsat_val_t *psol, hprsat_solve_callback_t *cb, void *arg)
 {
 	ADD *xa;
 
@@ -147,7 +161,7 @@ hprsat_solve_callback(ADD *xm, uint8_t *psol, hprsat_solve_callback_t *cb, void 
 
 	const hprsat_var_t v = xm->first()->vfirst()->var;
 
-	for (psol[v] = 0; psol[v] != 2; psol[v]++) {
+	for (psol[v] = 0; psol[v] != hprsat_global_mod; psol[v]++) {
 		for (xa = xm->next(); xa->first(); xa = xa->next()) {
 			if (ADD(*xa).expand_all(psol).isNonZeroConst())
 				goto next;
@@ -160,14 +174,14 @@ hprsat_solve_callback(ADD *xm, uint8_t *psol, hprsat_solve_callback_t *cb, void 
 }
 
 static bool
-hprsat_solve_do_count(void *arg, uint8_t *)
+hprsat_solve_do_count(void *arg, hprsat_val_t *)
 {
 	(*(size_t *)arg)++;
 	return (true);
 }
 
 size_t
-hprsat_solve_count(ADD_HEAD_t *xhead, uint8_t *psol)
+hprsat_solve_count(ADD_HEAD_t *xhead, hprsat_val_t *psol)
 {
 	size_t retval = 0;
 	hprsat_solve_callback(TAILQ_FIRST(xhead), psol, hprsat_solve_do_count, &retval);
@@ -175,17 +189,19 @@ hprsat_solve_count(ADD_HEAD_t *xhead, uint8_t *psol)
 }
 
 bool
-hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
+hprsat_solve_first(ADD_HEAD_t *xhead, hprsat_val_t *psol, bool useProbability)
 {
 	bool retval = true;
 
 	/* compute the derivated XORs in the right order */
 	for (ADD *xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
-		hprsat_val_t score[2] = { 0, 0 };
+		hprsat_val_t score[hprsat_global_mod];
 		const hprsat_var_t v = xa->first()->vfirst()->var;
+		memset(score, 0, sizeof(score));
+
 		printf("# VAR %zd\n", v);
 		if (useProbability) {
-			for (uint8_t x = 0; x != 2; x++) {
+			for (hprsat_val_t x = 0; x != hprsat_global_mod; x++) {
 				psol[v] = x;
 
 				for (ADD *xb = xa->next(); xb->first(); xb = xb->next()) {
@@ -195,11 +211,15 @@ hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
 						score[x] += abs(test);
 				}
 			}
-			psol[v] = (score[0] > score[1]);
+			psol[v] = 0;
+			for (hprsat_val_t x = 1; x != hprsat_global_mod; x++) {
+				if (score[x] < score[psol[v]])
+					psol[v] = x;
+			}
 		}
 		for (xa = xa->next(); xa->first(); xa = xa->next()) {
 			printf("# "); xa->print();
-			while (psol[v] != 2) {
+			while (psol[v] != hprsat_global_mod) {
 				if (ADD(*xa).expand_all(psol).isNonZeroConst() == false)
 					break;
 				if (useProbability) {
