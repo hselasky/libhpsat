@@ -271,3 +271,43 @@ ADD :: print(std::ostream &out) const
 			out << "+";
 	}
 }
+
+ADD &
+ADD :: defactor()
+{
+	VAR *pv;
+
+	MUL *pa;
+	MUL *pb;
+	MUL *pn;
+
+	bool any;
+top:
+	any = false;
+
+	for (pa = first(); pa; pa = pn) {
+		pn = pa->next();
+
+		for (pv = pa->vfirst(); pv; pv = pv->next()) {
+			if (pv->add == 0)
+				continue;
+			if ((pv->pwr % HPRSAT_PWR_UNIT) != 0)
+				continue;
+			ADD temp(pv->add->expandPower(pv->pwr));
+			delete pv->remove(&pa->vhead);
+			while ((pb = temp.first())) {
+				pb->remove(&temp.head)->insert_tail(&head);
+				*pb *= *pa;
+			}
+			delete pa->remove(&head);
+			any = true;
+			break;
+		}
+	}
+
+	if (any) {
+		sort();
+		goto top;
+	}
+	return (*this);
+}

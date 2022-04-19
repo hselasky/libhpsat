@@ -530,6 +530,7 @@ public:
 	ADD & xform_inv(hprsat_var_t);
 	ADD expandPower(hprsat_pwr_t);
 	ADD raisePower(hprsat_pwr_t);
+	ADD & defactor();
 };
 
 extern hprsat_var_t hprsat_maxvar(const ADD_HEAD_t *, hprsat_var_t = HPRSAT_VAR_MAX);
