@@ -294,24 +294,6 @@ repeat_0:
 		TAILQ_CONCAT(xhead, &leftover, entry);
 		return (true);
 	}
-#if 0
-	for (xa = TAILQ_FIRST(xhead); xa; xa = xa->next()) {
-
-		/* Ignore all single variable statements. */
-		if (xa->maxVar() == xa->minVar())
-			continue;
-		/* check if any bits must be constant */
-		for (hprsat_var_t v = HPRSAT_VAR_MAX; (v = xa->maxVar(v)) != HPRSAT_VAR_MIN; ) {
-			if (ADD(*xa).expand(v, false).isNonZeroConst()) {
-				(new ADD(ADD(1, v) - ADD(1)))->insert_head(xhead);
-				any = true;
-			} else if (ADD(*xa).expand(v, true).isNonZeroConst()) {
-				(new ADD(1, v))->insert_head(xhead);
-				any = true;
-			}
-		}
-	}
-#endif
 	return (any);
 
 err_non_zero:
