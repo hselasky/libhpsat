@@ -60,7 +60,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 	/* Make sure all expressions are defactored. */
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
-		if (xa->defactor_all().first() == 0)
+		if (xa->defactor().first() == 0)
 			delete xa->remove(xhead);
 	}
 
@@ -148,7 +148,7 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 				for (xb = TAILQ_FIRST(&thead); xb != 0; xb = xb->next()) {
 					xn = new ADD(xa[0] * xb[0]);
 					if (xn->isNonZeroVariable())
-						xn->insert_tail(&uhead);
+						xn->defactor().insert_tail(&uhead);
 					else
 						delete xn;
 				}
