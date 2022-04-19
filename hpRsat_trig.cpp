@@ -89,7 +89,7 @@ hprsat_cos_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
 			else
 				retval = ADD(1) + retval;
 		} else {
-			retval = ADD(1) + retval * (ADD(1) - ADD(1, var++));
+			retval = ADD(1) + retval * (ADD(1) - ADD(2, var++));
 		}
 		retval = (retval * half).raisePower(HPRSAT_PWR_SQRT);
 	}
