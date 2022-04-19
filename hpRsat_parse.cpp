@@ -318,13 +318,13 @@ hprsat_parse(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *pmax, bool verbo
 			offset = 3;
 			hprsat_skip_space(line, offset);
 			mod = hprsat_read_value(line, offset);
-			if (mod <= 0)
+			if (mod <= 1)
 				goto error;
 			hprsat_set_global_modulus(mod);
 			continue;
 		}
 
-		if (mod <= 0)
+		if (mod <= 1)
 			goto error;
 	
 		ADD temp;
