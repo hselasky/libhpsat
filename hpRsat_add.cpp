@@ -69,149 +69,10 @@ ADD :: sort()
 	return (*this);
 }
 
-static int
-hprsat_compare(const void *a, const void *b)
-{
-	return ((ADD * const *)a)[0][0].compare(((ADD * const *)b)[0][0]);
-}
-
-bool
-hprsat_sort_or(ADD_HEAD_t *phead)
-{
-	ADD *pa;
-	ADD *pn;
-	ADD **pp;
-	size_t count = 0;
-	bool did_sort;
-
-	for (pa = TAILQ_FIRST(phead); pa; pa = pn) {
-		bool isNaN;
-		const hprsat_val_t value = pa->sort().getConst(isNaN);
-		pn = pa->next();
-
-		if (isNaN == false && value == 0) {
-			delete pa->remove(phead);
-		} else if (!pa->isVariable()) {
-			pa->remove(phead);
-			hprsat_free(phead);
-			pa->insert_tail(phead);
-			return (false);
-		} else {
-			count++;
-		}
-	}
-
-	if (count == 0)
-		return (false);
-	pp = new ADD * [count];
-
-	count = 0;
-	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next())
-		pp[count++] = pa;
-
-	did_sort = false;
-
-	for (size_t x = 1; x != count; x++) {
-		if (pp[x - 1]->compare(*pp[x]) > 0) {
-			did_sort = true;
-			break;
-		}
-	}
-	if (did_sort)
-		mergesort(pp, count, sizeof(pp[0]), &hprsat_compare);
-
-	TAILQ_INIT(phead);
-
-	for (size_t x = 1; x != count; x++) {
-		if (pp[x - 1]->compare(*pp[x]) == 0) {
-			did_sort = true;
-			delete pp[x - 1];
-		} else {
-			pp[x - 1]->insert_tail(phead);
-		}
-	}
-	pp[count - 1]->insert_tail(phead);
-
-	delete [] pp;
-
-	return (did_sort);
-}
-
-bool
-hprsat_sort_mul(ADD_HEAD_t *phead, ADD &defactor, hprsat_val_t &factor)
-{
-	ADD *pa;
-	ADD *pn;
-	ADD **pp;
-	size_t count = 0;
-	bool did_sort;
-
-	for (pa = TAILQ_FIRST(phead); pa; pa = pn) {
-		bool isNaN;
-		const hprsat_val_t value = pa->sort().getConst(isNaN);
-		pn = pa->next();
-
-		if (isNaN == false) {
-			factor *= value;
-			hprsat_do_global_modulus(factor);
-			delete pa->remove(phead);
-		} else {
-			count++;
-		}
-	}
-
-	if (factor == 0) {
-		hprsat_free(phead);
-		return (false);
-	}
-
-	if (count == 0)
-		return (false);
-	pp = new ADD * [count];
-
-	count = 0;
-	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next())
-		pp[count++] = pa;
-
-	did_sort = false;
-	for (size_t x = 1; x != count; x++) {
-		if (pp[x - 1]->compare(*pp[x]) > 0) {
-			did_sort = true;
-			break;
-		}
-	}
-	if (did_sort)
-		mergesort(pp, count, sizeof(pp[0]), &hprsat_compare);
-
-	TAILQ_INIT(phead);
-
-	for (size_t x = 1; x != count; x++) {
-		if (pp[x - 1]->compare(*pp[x]) == 0) {
-			/* Accumulate power. */
-			did_sort = true;
-			defactor *= *pp[x - 1];
-
-			delete pp[x - 1];
-			delete pp[x];
-			x++;
-			if (x == count)
-				goto done;
-		} else {
-			pp[x - 1]->insert_tail(phead);
-		}
-	}
-
-	pp[count - 1]->insert_tail(phead);
-done:
-	delete [] pp;
-
-	return (did_sort);
-}
-
 ADD
 ADD :: operator *(const ADD &other) const
 {
-#if 1
+#if 0
 	/*
 	 * Speedup multiplication by use of transform.
 	 */
@@ -235,7 +96,7 @@ ADD :: operator *(const ADD &other) const
 	MUL *pb = tb.first();
 
 	while (pa && pb) {
-		int ret = pa->compare(*pb, HPRSAT_CMP_NLF);
+		int ret = pa->compare(*pb, true);
 		if (ret == 0) {
 			(new MUL(*pa * *pb))->insert_tail(&tc.head);
 			pa = pa->next();
@@ -273,27 +134,6 @@ ADD :: operator *(const ADD &other) const
 #endif
 }
 
-bool
-hprsat_try_sqrt(hprsat_val_t &value, bool doSqrt)
-{
-	if (doSqrt) {
-		value = sqrt(abs(value));
-		return (true);
-	} else if (value == 0 || value == 1) {
-		return (true);
-	} else if (value < 0) {
-		return (false);
-	} else {
-		hprsat_val_t test = sqrt(value);
-		if ((test * test) == value) {
-			value = test;
-			return (true);
-		} else {
-			return (false);
-		}
-	}
-}
-
 ADD *
 ADD :: sort_insert_tail(ADD_HEAD_t *phead, hprsat_val_t &factor)
 {
@@ -305,25 +145,27 @@ ADD :: sort_insert_tail(ADD_HEAD_t *phead, hprsat_val_t &factor)
 	} else {
 		delete this;
 		factor *= value;
-		hprsat_do_global_modulus(factor);
+		factor %= hprsat_global_mod;
 	}
 	return (pn);
 }
 
 hprsat_val_t
-ADD :: getConst(bool &isNaN, bool doSqrt) const
+ADD :: getConst(bool &isNaN) const
 {
 	hprsat_val_t value = 0;
 	for (MUL *pa = first(); pa; pa = pa->next()) {
-		const hprsat_val_t temp = pa->getConst(isNaN, doSqrt);
+		const hprsat_val_t temp = pa->getConst(isNaN);
 		if (isNaN) {
 			return (temp);
 		} else {
 			value += temp;
-			hprsat_do_global_modulus(value);
 		}
 	}
 	isNaN = false;
+	value %= hprsat_global_mod;
+	if (value < 0)
+		value += hprsat_global_mod;
 	return (value);
 }
 
@@ -332,65 +174,41 @@ ADD :: align()
 {
 	hprsat_val_t value;
 
-	if (last() == 0 || hprsat_global_modulus == 0)
+	if (last() == 0)
 		goto done;
 
-	hprsat_do_global_inverse(last()->factor_lin, value);
+	hprsat_do_inverse(last()->factor_lin, hprsat_global_mod, value);
 
 	if (value == 0)
 		goto done;
 
 	for (MUL *pa = first(); pa; pa = pa->next()) {
 		pa->factor_lin *= value;
-		hprsat_do_global_modulus(pa->factor_lin);
-		hprsat_do_global_sign(pa->factor_lin);
+		pa->factor_lin %= hprsat_global_mod;
+		if (pa->factor_lin < 0)
+			pa->factor_lin += hprsat_global_mod;
 	}
 done:
 	return (*this);
 }
 
-ADD &
-ADD :: toBinary()
+ADD
+ADD :: expandPower(hprsat_pwr_t exp)
 {
-#if 1
-	ADD vars;
+	MUL one;
+	ADD temp(one);
+	ADD base(*this);
 
-	for (hprsat_var_t v = HPRSAT_VAR_MAX;; ) {
-		v = maxVar(v);
-		if (v == HPRSAT_VAR_MIN)
-			break;
-		(new MUL(1,v))->insert_tail(&vars.head);
-	}
+	assert(exp >= 0);
+	assert((exp % HPRSAT_PWR_UNIT) == 0);
 
-	/*
-	 * Use transform to compute result quickly.
-	 */
-	for (MUL *pa = vars.first(); pa; pa = pa->next())
-		xform_fwd(pa->maxVar());
-
-	for (MUL *pa = first(); pa; pa = pa->next())
-		pa->factor_lin = (pa->factor_lin != 0);
-
-	for (MUL *pa = vars.first(); pa; pa = pa->next())
-		xform_inv(pa->maxVar());
-
-	return (*this);
-#else
-	hprsat_val_t exp = hprsat_global_modulus - 1;
-	ADD temp;
-
-	TAILQ_CONCAT(&temp.head, &head, entry);
-
-	*this = ADD(1);
-
-	while (exp != 0) {
-		if ((exp & 1) != 0)
-			*this *= temp;
-		temp *= temp;
+	while (exp >= HPRSAT_PWR_UNIT) {
+		if ((exp & HPRSAT_PWR_UNIT) != 0)
+			temp *= base;
+		base *= base;
 		exp /= 2;
 	}
-	return (*this);
-#endif
+	return (temp);
 }
 
 ADD &
@@ -423,4 +241,33 @@ ADD :: xform_inv(hprsat_var_t v)
 	}
 	TAILQ_CONCAT(&head, &temp, entry);
 	return (sort());
+}
+
+ADD
+ADD :: raisePower(hprsat_pwr_t pwr)
+{
+	ADD ret;
+
+	VAR *pv = new VAR(0, pwr);
+	pv->add = new ADD(*this);
+	MUL *pm = new MUL();
+
+	pv->insert_tail(&pm->vhead);
+	pm->insert_tail(&ret.head);
+
+	return (ret.sort());
+}
+
+void
+ADD :: print(std::ostream &out) const
+{
+	for (MUL *pa = TAILQ_FIRST(&head); pa; pa = pa->next()) {
+		if (pa->vfirst())
+			out << "(";
+		pa->print(out);
+		if (pa->vfirst())
+			out << ")";
+		if (pa->next())
+			out << "+";
+	}
 }

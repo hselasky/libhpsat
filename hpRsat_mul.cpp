@@ -79,7 +79,7 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 	bool did_sort = false;
 
 	for (pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
-		pa->sort(phead);
+		pa->sort();
 		count++;
 	}
 
@@ -93,7 +93,7 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 		pp[count++] = pa;
 
 	for (x = 1; x != count; x++) {
-		if ((pp + x - 1)[0][0].compare((pp + x)[0][0], HPRSAT_CMP_NLF) > 0) {
+		if ((pp + x - 1)[0][0].compare((pp + x)[0][0], true) > 0) {
 			did_sort = true;
 			break;
 		}
@@ -108,11 +108,13 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 		hprsat_val_t value;
 
 		for (y = x + 1; y != count; y++) {
-			if ((pp + x)[0][0].compare((pp + y)[0][0], HPRSAT_CMP_NLF) != 0)
+			if ((pp + x)[0][0].compare((pp + y)[0][0], true) != 0)
 				break;
-			pp[x]->factor_lin += pp[y]->factor_lin;
-			hprsat_do_global_modulus(pp[x]->factor_lin);
+			*pp[x] += *pp[y];
 		}
+
+		if (y != x + 1)
+			pp[x]->sort();
 
 		value = pp[x]->getConst(isNaN);
 		if (isNaN == false && value == 0) {
@@ -133,75 +135,35 @@ hprsat_sort_add(MUL_HEAD_t *phead)
 }
 
 MUL &
-MUL :: sort(MUL_HEAD_t *phead)
+MUL :: sort()
 {
-	VAR *pa;
-	VAR *pn;
-
-	MUL *ra;
-
-	if (factor_lin == 0 || factor_sqrt == 0)
-		return (zero());
-
-	for (pa = vfirst(); pa; pa = pn) {
-		bool isNaN;
-		const hprsat_val_t value = pa->getConst(isNaN);
-		pn = pa->next();
-		if (isNaN == false) {
-			factor_lin *= value;
-			hprsat_do_global_modulus(factor_lin);
-			delete pa->remove(&vhead);
-		}
-	}
-
 	if (factor_lin == 0)
 		return (zero());
 
-	ADD defactor(1);
+	hprsat_sort_var(&vhead, factor_lin);
 
-	hprsat_sort_mul(&ahead, defactor, factor_sqrt);
+	factor_lin %= hprsat_global_mod;
+	if (factor_lin < 0)
+		factor_lin += hprsat_global_mod;
 
-	if (factor_sqrt == 0)
-		return (zero());
-
-	if (defactor != ADD(1)) {
-		while (1) {
-			ra = defactor.first();
-			if (ra == 0)
-				break;
-			*ra *= *this;
-			ra->remove(&defactor.head)->insert_tail(phead);
-		}
-		return (zero());
-	}
-	return (*this);
+	return (factor_lin ? *this : zero());
 }
 
 MUL :: ~MUL()
 {
 	hprsat_free(&vhead);
-	hprsat_free(&ahead);
 }
 
 hprsat_var_t
 MUL :: maxVar(hprsat_var_t limit) const
 {
-	hprsat_var_t vmax = hprsat_maxvar(&vhead, limit);
-	hprsat_var_t xmax = hprsat_maxvar(&ahead, limit);
-	return (vmax > xmax ? vmax : xmax);
+	return (hprsat_maxvar(&vhead, limit));
 }
 
 hprsat_var_t
 MUL :: minVar(hprsat_var_t limit) const
 {
-	hprsat_var_t vmin = hprsat_minvar(&vhead, limit);
-	hprsat_var_t xmin = hprsat_minvar(&ahead, limit);
-	if (vmin == HPRSAT_VAR_MIN)
-		return (xmin);
-	else if (xmin == HPRSAT_VAR_MIN)
-		return (vmin);
-	else
-		return (vmin < xmin ? vmin : xmin);
+	return (hprsat_minvar(&vhead, limit));
 }
 
 MUL &
@@ -209,8 +171,6 @@ MUL :: addVar(hprsat_var_t delta)
 {
 	for (VAR *pa = TAILQ_FIRST(&vhead); pa; pa = pa->next())
 		pa->addVar(delta);
-	for (ADD *pa = TAILQ_FIRST(&ahead); pa; pa = pa->next())
-			pa->addVar(delta);
 	return (*this);
 }
 
@@ -218,8 +178,6 @@ MUL &
 MUL :: mulVar(hprsat_var_t factor)
 {
 	for (VAR *pa = TAILQ_FIRST(&vhead); pa; pa = pa->next())
-		pa->mulVar(factor);
-	for (ADD *pa = TAILQ_FIRST(&ahead); pa; pa = pa->next())
 		pa->mulVar(factor);
 	return (*this);
 }
@@ -231,18 +189,13 @@ MUL :: isVariable() const
 		if (pa->isVariable())
 			return (true);
 	}
-	for (ADD *pa = afirst(); pa; pa = pa->next()) {
-		if (pa->isVariable())
-			return (true);
-	}
 	return (false);
 }
 
 hprsat_val_t
-MUL :: getConst(bool &isNaN, bool doSqrt) const
+MUL :: getConst(bool &isNaN) const
 {
 	hprsat_val_t value_lin = factor_lin;
-	hprsat_val_t value_sqrt = factor_sqrt;
 	bool undefined = false;
 
 	for (VAR *pa = TAILQ_FIRST(&vhead); pa; pa = pa->next()) {
@@ -251,29 +204,19 @@ MUL :: getConst(bool &isNaN, bool doSqrt) const
 			undefined = true;
 		} else {
 			value_lin *= temp;
-			hprsat_do_global_modulus(value_lin);
-		}
-	}
-
-	for (ADD *pa = TAILQ_FIRST(&ahead); pa; pa = pa->next()) {
-		const hprsat_val_t temp = pa->getConst(isNaN, doSqrt);
-		if (isNaN) {
-			undefined = true;
-		} else {
-			value_sqrt *= temp;
 		}
 	}
 
 	/* Zero is stronger than undefined. */
-	if (value_lin == 0 || value_sqrt == 0) {
+	if (value_lin == 0) {
 		isNaN = false;
 		return (0);
-	} else if (undefined || hprsat_try_sqrt(value_sqrt, doSqrt) == false) {
+	} else if (undefined) {
 		isNaN = true;
 		return (0);
 	} else {
 		isNaN = false;
-		return (value_sqrt * value_lin);
+		return (value_lin);
 	}
 }
 
@@ -281,10 +224,6 @@ bool
 MUL :: contains(hprsat_var_t var) const
 {
 	for (VAR *pa = TAILQ_FIRST(&vhead); pa; pa = pa->next()) {
-		if (pa->contains(var))
-			return (true);
-	}
-	for (ADD *pa = TAILQ_FIRST(&ahead); pa; pa = pa->next()) {
 		if (pa->contains(var))
 			return (true);
 	}
@@ -297,40 +236,48 @@ MUL :: operator =(const MUL &other)
 	if (this == &other)
 		return (*this);
 	hprsat_free(&vhead);
-	hprsat_free(&ahead);
 	factor_lin = other.factor_lin;
-	factor_sqrt = other.factor_sqrt;
 	for (VAR *pa = TAILQ_FIRST(&other.vhead); pa; pa = pa->next())
 		pa->dup()->insert_tail(&vhead);
-	for (ADD *pa = TAILQ_FIRST(&other.ahead); pa; pa = pa->next())
-		pa->dup()->insert_tail(&ahead);
+	return (*this);
+}
+
+MUL &
+MUL :: operator +=(const MUL &other)
+{
+	factor_lin += other.factor_lin;
+
 	return (*this);
 }
 
 MUL &
 MUL :: operator *=(const MUL &other)
 {
+	const hprsat_pwr_t m = (hprsat_global_mod - 1) * HPRSAT_PWR_UNIT;
 	hprsat_val_t value;
 	bool isNaN;
 
 	VAR *p0 = TAILQ_FIRST(&vhead);
 	const VAR *p1 = TAILQ_FIRST(&other.vhead);
 
-	ADD *q0 = TAILQ_FIRST(&ahead);
-	const ADD *q1 = TAILQ_FIRST(&other.ahead);
-
 	factor_lin *= other.factor_lin;
-	hprsat_do_global_modulus(factor_lin);
-
-	factor_sqrt *= other.factor_sqrt;
+	factor_lin %= hprsat_global_mod;
 
 	TAILQ_INIT(&vhead);
-	TAILQ_INIT(&ahead);
 
 	while (p0 && p1) {
-		if (p0->var == p1->var) {
+		int cmp = p0->compare(*p1, true);
+		if (cmp == 0) {
+			if (p0->pwr != 0 || p1->pwr != 0) {
+				p0->pwr += p1->pwr;
+				p0->pwr %= m;
+				if (p0->pwr < 0)
+					p0->pwr += m;
+				if (p0->pwr == 0)
+					p0->pwr = m;
+			}
 			p1 = p1->next();
-		} else if (p0->var > p1->var) {
+		} else if (cmp > 0) {
 			(new VAR(*p1))->sort_insert_tail(&vhead, factor_lin);
 			p1 = p1->next();
 		} else {
@@ -343,27 +290,6 @@ MUL :: operator *=(const MUL &other)
 	while (p1) {
 		(new VAR(*p1))->sort_insert_tail(&vhead, factor_lin);
 		p1 = p1->next();
-	}
-
-	while (q0 && q1) {
-		int ret = q0->compare(*q1);
-		if (ret == 0) {
-			q0 = q0->sort_insert_tail(&ahead, factor_sqrt);
-			(new ADD(*q1))->sort_insert_tail(&ahead, factor_sqrt);
-			q1 = q1->next();
-		} else if (ret > 0) {
-			(new ADD(*q1))->sort_insert_tail(&ahead, factor_sqrt);
-			q1 = q1->next();
-		} else {
-			q0 = q0->sort_insert_tail(&ahead, factor_sqrt);
-		}
-	}
-	while (q0) {
-		q0 = q0->sort_insert_tail(&ahead, factor_sqrt);
-	}
-	while (q1) {
-		(new ADD(*q1))->sort_insert_tail(&ahead, factor_sqrt);
-		q1 = q1->next();
 	}
 
 	value = getConst(isNaN);
@@ -379,53 +305,27 @@ MUL :: count() const
 	size_t retval = 0;
 	for (VAR *pa = vfirst(); pa; pa = pa->next())
 		retval++;
-	for (ADD *pa = afirst(); pa; pa = pa->next())
-		retval++;
 	return (retval);
 }
 
 void
 MUL :: print(std::ostream &out) const
 {
-	bool isNaN;
-	const hprsat_val_t value = getConst(isNaN);
+	if (factor_lin != 1 || vfirst() == 0) {
+		out << factor_lin;
+		if (vfirst())
+			out << "*";
+	}
 
-	if (isNaN) {
-		if (factor_lin != 1) {
-			if (factor_lin != -1) {
-				out << factor_lin;
-				if (factor_sqrt != 1 || vfirst() || afirst())
-					out << "*";
-			} else {
-				out << "-";
-			}
-		}
-		if (factor_sqrt != 1) {
-			out << "sqrt(";
-			out << factor_sqrt;
-			out << ")";
-			if (vfirst() || afirst())
-				out << "*";
-		}
-		for (VAR *pa = vfirst(); pa; pa = pa->next()) {
-			pa->print(out);
-			if (pa->next() || afirst())
-				out << "*";
-		}
-		for (ADD *pa = afirst(); pa; pa = pa->next()) {
-			out << "sqrt(";
-			pa->print(out);
-			out << ")";
-			if (pa->next())
-				out << "*";
-		}
-	} else {
-		out << value;
+	for (VAR *pa = vfirst(); pa; pa = pa->next()) {
+		pa->print(out);
+		if (pa->next())
+			out << "*";
 	}
 }
 
 int
-MUL :: compare(const MUL & other, uint8_t compareFactor) const
+MUL :: compare(const MUL & other, bool exprOnly) const
 {
 	const size_t na = count();
 	const size_t nb = other.count();
@@ -447,29 +347,8 @@ MUL :: compare(const MUL & other, uint8_t compareFactor) const
 		pb = pb->next();
 	}
 	ret = (pa != 0) - (pb != 0);
-	if (ret)
+	if (ret || exprOnly)
 		return (ret);
-
-	const ADD *qa = afirst();
-	const ADD *qb = other.afirst();
-
-	while (qa && qb) {
-		ret = qa->compare(*qb);
-		if (ret)
-			return (ret);
-		qa = qa->next();
-		qb = qb->next();
-	}
-	ret = (qa != 0) - (qb != 0);
-
-	if (ret || compareFactor == HPRSAT_CMP_NFA)
-		return (ret);
-	else if (factor_sqrt > other.factor_sqrt)
-		return (1);
-	else if (factor_sqrt < other.factor_sqrt)
-		return (-1);
-	else if (compareFactor == HPRSAT_CMP_NLF)
-		return (0);
 	else if (factor_lin > other.factor_lin)
 		return (1);
 	else if (factor_lin < other.factor_lin)
@@ -490,10 +369,6 @@ MUL :: expand(hprsat_var_t var, bool value)
 			delete pa->remove(&vhead);
 		}
 	}
-
-	for (ADD *pa = afirst(); pa; pa = pa->next())
-		pa->expand(var, value);
-
 	return (*this);
 }
 
@@ -505,10 +380,6 @@ MUL :: expand_all(const uint8_t *pvar)
 			factor_lin = 0;
 	}
 	hprsat_free(&vhead);
-
-	for (ADD *pa = afirst(); pa; pa = pa->next())
-		pa->expand_all(pvar);
-
 	return (*this);
 }
 
@@ -516,9 +387,7 @@ MUL &
 MUL :: zero()
 {
 	factor_lin = 0;
-	factor_sqrt = 1;
 	hprsat_free(&vhead);
-	hprsat_free(&ahead);
 	return (*this);
 }
 
@@ -529,12 +398,7 @@ MUL :: operator /=(const MUL &other)
 	VAR *vb;
 	VAR *vn;
 
-	ADD *aa;
-	ADD *ab;
-	ADD *an;
-
 	factor_lin /= other.factor_lin;
-	factor_sqrt /= other.factor_sqrt;
 
 	va = vfirst();
 	vb = other.vfirst();
@@ -549,22 +413,6 @@ MUL :: operator /=(const MUL &other)
 			vb = vb->next();
 		} else {
 			va = va->next();
-		}
-	}
-
-	aa = afirst();
-	ab = other.afirst();
-
-	while (aa && ab) {
-		int ret = aa->compare(*ab);
-		if (ret == 0) {
-			an = aa->next();
-			delete aa->remove(&ahead);
-			aa = an;
-		} else if (ret > 0) {
-			ab = ab->next();
-		} else {
-			aa = aa->next();
 		}
 	}
 	return (*this);

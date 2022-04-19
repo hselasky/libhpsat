@@ -65,6 +65,8 @@ hprsat_loadcnf(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *plimit, hprsat
 	hprsat_var_t v_limit = 0;
 	hprsat_var_t v_temp = 1;
 
+	hprsat_set_global_modulus(13);	/* XXX assume 3-SAT for now */
+
 	while (getline(in, line)) {
 		if (line[0] == 'c') {
 			std::cerr << line << "\n";

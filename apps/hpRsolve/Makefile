@@ -1,5 +1,5 @@
 PROG_CXX=hpRsolve
-LDADD=-lhpRsat -lgmp -lgmpxx -lm
+LDADD=-lhpRsat -lm
 PREFIX?=/usr/local
 MAN=
 SRCS=hpRsolve.cpp

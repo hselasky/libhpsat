@@ -63,45 +63,45 @@ hprsat_compare_range(const void *_a, const void *_b)
 }
 
 static void
-hprsat_clip(hprsat_val_t &value)
+hprsat_clip(hprsat_val_t &value, const hprsat_val_t &mod)
 {
-	if (value > hprsat_global_modulus)
-		value = hprsat_global_modulus;
+	if (value > mod)
+		value = mod;
 }
 
 /*
  * Returns true if ranges were merged.
  */
 static bool
-hprsat_merge_range(const hprsat_range &from, hprsat_range &to)
+hprsat_merge_range(const hprsat_range &from, hprsat_range &to, const hprsat_val_t &mod)
 {
 	hprsat_val_t d;
 
 	/* d = (from.step / to.step) */
-	hprsat_do_global_inverse(to.step, d);
+	hprsat_do_inverse(to.step, mod, d);
 	d *= from.step;
-	hprsat_do_global_modulus(d);
+	d %= mod;
 
 	/* Check for intersection. */
 	if (to.num_pos >= d || to.num_neg >= d) {
 		/* Extend range. */
 		to.num_pos += from.num_pos * d;
 		to.num_neg += from.num_neg * d;
-		hprsat_clip(to.num_pos);
-		hprsat_clip(to.num_neg);
+		hprsat_clip(to.num_pos, mod);
+		hprsat_clip(to.num_neg, mod);
 		return (true);
 	}
 
 	/* d = -d */
-	d = hprsat_global_modulus - d;
+	d = mod - d;
 
 	/* Check for intersection. */
 	if (to.num_pos >= d || to.num_neg >= d) {
 		/* Extend range. */
 		to.num_pos += from.num_neg * d;
 		to.num_neg += from.num_pos * d;
-		hprsat_clip(to.num_pos);
-		hprsat_clip(to.num_neg);
+		hprsat_clip(to.num_pos, mod);
+		hprsat_clip(to.num_neg, mod);
 		return (true);
 	}
 	return (false);
@@ -111,33 +111,33 @@ hprsat_merge_range(const hprsat_range &from, hprsat_range &to)
  * Returns true if ranges were merged.
  */
 static bool
-hprsat_within_range(const hprsat_val_t step, hprsat_range &range)
+hprsat_within_range(const hprsat_val_t step, hprsat_range &range, const hprsat_val_t &mod)
 {
 	hprsat_val_t d;
 
 	/* d = (from.step / to.step) */
-	hprsat_do_global_inverse(range.step, d);
+	hprsat_do_inverse(range.step, mod, d);
 	d *= step;
-	hprsat_do_global_modulus(d);
+	d %= mod;
 
 	/* Store combination. */
 	range.combo = d;
 
-	return (d <= range.num_pos || (hprsat_global_modulus - d) <= range.num_neg);
+	return (d <= range.num_pos || (mod - d) <= range.num_neg);
 }
 
 static bool
-hprsat_intersects(const MUL &mul, hprsat_range &to)
+hprsat_intersects(const MUL &mul, hprsat_range &to, const hprsat_val_t &mod)
 {
 	hprsat_range from;
 
 	from.step = mul.factor_lin;
 
-	return (hprsat_merge_range(from, to));
+	return (hprsat_merge_range(from, to, mod));
 }
 
 static bool
-hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, size_t searchLimit)
+hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, const hprsat_val_t &mod, size_t searchLimit)
 {
 	hprsat_range *prange;
 	hprsat_range **pprange;
@@ -152,9 +152,6 @@ hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, size_t searchLimit)
 	ADD *xn;
 
 	for (pa = xa->first(); pa; pa = pa->next()) {
-		/* No square roots are supported. */
-		if (pa->factor_sqrt != 1 || pa->afirst() != 0)
-			return (false);
 		/* Skip constants. */
 		if (pa->vfirst() == 0 || pa->factor_lin == 0)
 			continue;
@@ -195,7 +192,7 @@ hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, size_t searchLimit)
 			for (y = 0; y != count; y++) {
 				if (x == y || pprange[y] == 0)
 					continue;
-				if (hprsat_merge_range(*pprange[y], *pprange[x])) {
+				if (hprsat_merge_range(*pprange[y], *pprange[x], mod)) {
 					pprange[y] = 0;
 					found = true;
 				}
@@ -256,7 +253,7 @@ hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, size_t searchLimit)
 		sum = - sum - bias;
 
 		/* Check if we found a valid combination. */
-		if (hprsat_within_range(sum, *pprange[count - 1])) {
+		if (hprsat_within_range(sum, *pprange[count - 1], mod)) {
 			if (nsol++ == 0) {
 				for (x = 0; x != count; x++) {
 					hprsat_range &r = *pprange[x];
@@ -309,14 +306,14 @@ hprsat_elevate_add(ADD *xa, ADD_HEAD_t *phead, size_t searchLimit)
 			if (pa->vfirst() == 0 || pa->factor_lin == 0)
 				  continue;
 			/* Check if element belongs to the given range. */
-			if (hprsat_intersects(*pa, r))
+			if (hprsat_intersects(*pa, r, mod))
 				pa->remove(&xa->head)->insert_tail(&xn->head);
 		}
 
 		/* Add "bias", if any. */
 		if (r.num_res != 0) {
 			bias = - r.num_res * r.step;
-			hprsat_do_global_modulus(bias);
+			bias %= mod;
 			(new MUL(bias))->insert_head(&xn->head);
 			/* Subract bias from remaining equation. */
 			(new MUL(bias))->negate().insert_head(&xa->head);
@@ -345,7 +342,7 @@ hprsat_elevate_add(ADD_HEAD_t *phead, size_t searchLimit)
 	for (xa = TAILQ_FIRST(phead); xa; xa = xn) {
 		xn = xa->next();
 		xa->remove(phead)->insert_tail(&output);
-		any |= hprsat_elevate_add(xa, &output, searchLimit);
+		any |= hprsat_elevate_add(xa, &output, hprsat_global_mod, searchLimit);
 	}
 
 	TAILQ_CONCAT(phead, &output, entry);

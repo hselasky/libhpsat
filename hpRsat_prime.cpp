@@ -25,158 +25,37 @@
 
 #include "hpRsat.h"
 
-class hprsat_prime;
-typedef TAILQ_CLASS_HEAD(, hprsat_prime) hprsat_prime_head_t;
-typedef TAILQ_CLASS_ENTRY(hprsat_prime) hprsat_prime_entry_t;
+hprsat_val_t hprsat_global_mod;
+hprsat_val_t *hprsat_global_sqrt;
 
-class hprsat_prime {
-public:
-	hprsat_prime_entry_t entry;
-	hprsat_val_t mod;
-
-	hprsat_prime *insert_tail(hprsat_prime_head_t *phead) {
-		TAILQ_INSERT_TAIL(phead, this, entry);
-		return (this);
-	};
-	hprsat_prime *remove(hprsat_prime_head_t *phead) {
-		TAILQ_REMOVE(phead, this, entry);
-		return (this);
-	};
-	hprsat_prime *next() {
-		return (TAILQ_NEXT(this, entry));
-	};
-};
-
-hprsat_val_t hprsat_global_modulus;
-hprsat_val_t hprsat_global_exponent;
-hprsat_val_t hprsat_global_half;
-static hprsat_prime_head_t hprsat_prime_head = TAILQ_HEAD_INITIALIZER(hprsat_prime_head);
-
-static void
-hprsat_free(hprsat_prime_head_t *phead)
+void
+hprsat_set_global_modulus(hprsat_val_t mod)
 {
-	for (hprsat_prime *pa; (pa = TAILQ_FIRST(phead)); )
-		delete pa->remove(phead);
+	hprsat_global_mod = mod;
+
+	delete [] hprsat_global_sqrt;
+	hprsat_global_sqrt = new hprsat_val_t [mod];
+
+	memset(hprsat_global_sqrt, 0, sizeof(hprsat_global_sqrt[0]) * mod);
+
+	for (hprsat_val_t x = 0; x != (mod / 2); x++)
+		hprsat_global_sqrt[(x * x) % mod] = x;
 }
 
 void
-hprsat_set_global_modulus(ADD_HEAD_t *phead)
+hprsat_do_inverse(hprsat_val_t val, hprsat_val_t mod, hprsat_val_t &r)
 {
-	hprsat_val_t min;
-	hprsat_val_t max;
-	hprsat_val_t range = 0;
+	hprsat_val_t exp = mod - 2;
 
-	hprsat_free(&hprsat_prime_head);
+	r = 1;
 
-	/* Compute the maximum range for each equation. */
-	for (ADD *pa = TAILQ_FIRST(phead); pa; pa = pa->next()) {
-		min = max = 0;
-
-		for (MUL *ma = pa->first(); ma; ma = ma->next()) {
-			if (ma->factor_lin < 0)
-				min += ma->factor_lin;
-			else
-				max += ma->factor_lin;
+	while (exp != 0) {
+		if (exp & 1) {
+			r *= val;
+			r %= mod;
 		}
-
-		max -= min;
-		if (range < max)
-			range = max;
+		exp /= 2;
+		val *= val;
+		val %= mod;
 	}
-
-	hprsat_global_modulus = 2;
-
-	/*
-	 * Compute a prime number big-enough to hold the complete range:
-	 */
-	hprsat_val_t counter = 1;
-top:
-	counter++;
-
-	if (hprsat_global_modulus < range) {
-		for (hprsat_prime *pa = TAILQ_FIRST(&hprsat_prime_head); pa; pa = pa->next()) {
-			if ((counter % pa->mod) == 0) {
-				/* Test this non-prime number. */
-				hprsat_val_t r;
-				hprsat_val_t b = 2;
-				hprsat_val_t e = counter * hprsat_global_modulus;
-				hprsat_val_t m = e + 1;
-
-				mpz_powm(r.get_mpz_t(), b.get_mpz_t(),
-					 e.get_mpz_t(), m.get_mpz_t());
-
-				/* Check if ring divides (P-1). */
-				if (r == 1) {
-					e /= 2;
-					mpz_powm(r.get_mpz_t(), b.get_mpz_t(),
-						 e.get_mpz_t(), m.get_mpz_t());
-
-					/* Check if ring does not divide (P-1) / 2. */
-					if (r != 1)
-						hprsat_global_modulus *= counter;
-				}
-
-				/* Get next non-prime number. */
-				goto top;
-			}
-		}
-		/* Accumulate and skip all prime numbers. */
-		(new hprsat_prime())->insert_tail(&hprsat_prime_head)->mod = counter;
-		goto top;
-	}
-
-	/* Clean up all the temporary primes. */
-	hprsat_free(&hprsat_prime_head);
-
-	/* Get our prime. */
-	hprsat_global_modulus++;
-
-	/* Set global exponent. */
-	hprsat_global_exponent = hprsat_global_modulus - 2;
-
-	/* Set global half. */
-	hprsat_global_half = hprsat_global_modulus / 2;
-}
-
-void
-hprsat_do_global_modulus(hprsat_val_t &val)
-{
-	if (hprsat_global_modulus != 0) {
-		val %= hprsat_global_modulus;
-		if (val < 0)
-			val += hprsat_global_modulus;
-	}
-}
-
-void
-hprsat_do_global_inverse(const hprsat_val_t &val, hprsat_val_t &r)
-{
-	mpz_powm(r.get_mpz_t(), val.get_mpz_t(),
-		 hprsat_global_exponent.get_mpz_t(),
-		 hprsat_global_modulus.get_mpz_t());
-}
-
-void
-hprsat_do_global_sign(hprsat_val_t &r)
-{
-	if (r > hprsat_global_half)
-		r -= hprsat_global_modulus;
-}
-
-void
-hprsat_do_global_abs(hprsat_val_t &r)
-{
-	if (r > hprsat_global_half)
-		r = hprsat_global_modulus - r;
-}
-
-void
-hprsat_do_global_scale(const hprsat_val_t &quotient, const hprsat_val_t &divisor,
-    hprsat_val_t &result)
-{
-	hprsat_val_t divisor_inv;
-
-	hprsat_do_global_inverse(divisor, divisor_inv);
-	result = quotient * divisor_inv;
-	hprsat_do_global_modulus(result);
 }

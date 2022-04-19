@@ -30,7 +30,7 @@
 static int
 hprsat_compare_value(const void *a, const void *b)
 {
-	return ((MUL * const *)a)[0][0].compare(((MUL * const *)b)[0][0], HPRSAT_CMP_NFA);
+	return ((MUL * const *)a)[0][0].compare(((MUL * const *)b)[0][0], true);
 }
 
 static ssize_t
@@ -48,32 +48,30 @@ hprsat_lookup_value(MUL **base, size_t num, MUL **key)
 }
 
 static bool
-hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &dst_which)
+hprsat_simplify_subtract_sort(const ADD &src, ADD &dst, const MUL &dst_which)
 {
 	const MUL &src_which = *src.last();
 
 	/* Try to divide. */
 	MUL mul;
 
-	if (dst_which.compare(src_which, HPRSAT_CMP_NFA) == 0) {
+	if (dst_which.compare(src_which, true) == 0) {
 		mul = MUL(1);
 	} else {
 		mul = MUL(dst_which).resetFactor() /
 		      MUL(src_which).resetFactor();
 
 		/* Check if division was not exact. */
-		if ((mul * src_which).compare(dst_which, HPRSAT_CMP_NFA) != 0)
+		if ((mul * src_which).compare(dst_which, true) != 0)
 			return (false);
 	}
 
 	/* Update factors. */
 	mul.factor_lin = dst_which.factor_lin;
-	mul.factor_sqrt = dst_which.factor_sqrt;
 
 	for (MUL *pa = dst.first(); pa; pa = pa->next()) {
 		pa->factor_lin *= src_which.factor_lin;
-		hprsat_do_global_modulus(pa->factor_lin);
-		pa->factor_sqrt *= src_which.factor_sqrt;
+		pa->factor_lin %= hprsat_global_mod;
 	}
 
 	/* Do subtraction. */
@@ -81,6 +79,7 @@ hprsat_simplify_subtract_gcd(const ADD &src, ADD &dst, const MUL &dst_which)
 		(new MUL(*pa * mul))->negate().insert_tail(&dst.head);
 
 	dst.sort();
+
 	return (true);
 }
 
@@ -91,7 +90,7 @@ hprsat_simplify_subtract_all(const ADD &src, ADD &dst)
 top:
 	/* Scan elements in reverse order. */
 	for (MUL *pa = dst.last(); pa; pa = pa->prev()) {
-		if (hprsat_simplify_subtract_gcd(src, dst, *pa)) {
+		if (hprsat_simplify_subtract_sort(src, dst, *pa)) {
 			any = true;
 			goto top;
 		}
@@ -128,7 +127,7 @@ hprsat_simplify_add_insert(ADD_HEAD_t *xhead, ADD_HEAD_t *pleft,
 	index = hprsat_lookup_value(phash, nhash, &pa);
 	if (index != -1) {
 		if (plast[index] != 0) {
-			hprsat_simplify_subtract_gcd(*plast[index], *xa, *pa);
+			hprsat_simplify_subtract_sort(*plast[index], *xa, *pa);
 			goto top;
 		} else {
 			plast[index] = xa;

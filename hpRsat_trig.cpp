@@ -28,7 +28,7 @@
 /*
  * The following functions generates the full sinus and cosinus
  * waveform from [0 to 360> degrees, using the full 32-bit integer
- * range. Note that the resulting value is multiplied by sqrt(2).
+ * range.
  */
 ADD
 hprsat_sin_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
@@ -47,7 +47,7 @@ hprsat_cos_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
 		switch (x) {
 		case 0xFFFFFFFFU:
 		case 0x00000000U:
-			return (ADD(2).doSqrt());
+			return (ADD(1));
 		case 0x3FFFFFFFU:
 		case 0x40000000U:
 		case 0xBFFFFFFFU:
@@ -55,11 +55,14 @@ hprsat_cos_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
 			return (ADD(0));
 		case 0x7FFFFFFFU:
 		case 0x80000000U:
-			return (ADD(-1) * ADD(2).doSqrt());
+			return (ADD(-1));
 		}
 	}
 
 	ADD retval;
+	ADD half(2);
+
+	half = half.raisePower(-HPRSAT_PWR_UNIT);
 
 	/*
 	 * Apply so-called "Gray-coding":
@@ -88,7 +91,7 @@ hprsat_cos_32(uint32_t angle, uint32_t mask, hprsat_var_t var)
 		} else {
 			retval = ADD(1) + retval * (ADD(1) - ADD(1, var++));
 		}
-		retval.doSqrt();
+		retval = (retval * half).raisePower(HPRSAT_PWR_SQRT);
 	}
 
 	/* Check if halfway */

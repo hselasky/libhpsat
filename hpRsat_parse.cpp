@@ -83,7 +83,7 @@ hprsat_read_value(std::string &line, size_t &offset)
 
 	while (line[offset] != 0) {
 		if (isdigit(line[offset])) {
-			value *= 10.0;
+			value *= 10;
 			value += line[offset] - '0';
 			offset++;
 		} else {
@@ -115,7 +115,7 @@ hprsat_test_and_skip(std::string &line, size_t &offset, char which)
 }
 
 static bool
-hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool = false);
+hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool = false, char = ')');
 
 static bool
 hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
@@ -142,14 +142,12 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
 		   line[offset+2] == 'r' &&
 		   line[offset+3] == 't' &&
 		   line[offset+4] == '(') {
-		MUL var;
 		ADD temp;
 
 		offset += 4;
 		if (hprsat_parse_add(line, offset, temp))
 			return (true);
-		temp.dup()->insert_tail(&var.ahead);
-		output = ADD(var);
+		output = temp.raisePower(HPRSAT_PWR_SQRT);
 		return (false);
 	} else if (line[offset] == 'c' &&
 		   line[offset+1] == 'o' &&
@@ -187,6 +185,30 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
 
 		output = hprsat_sin_32(phase * (1ULL << 32));
 		return (false);
+	} else if (line[offset] == 'p' &&
+		   line[offset+1] == 'o' &&
+		   line[offset+2] == 'w' &&
+		   line[offset+3] == '(') {
+		double power;
+		ADD temp;
+
+		offset += 3;
+		if (hprsat_parse_add(line, offset, temp, false, ','))
+			return (true);
+
+		hprsat_skip_space(line, offset);
+		power = hprsat_read_double_value(line, offset);
+		if ((HPRSAT_PWR_UNIT * power) != floor(HPRSAT_PWR_UNIT * power))
+			return (true);
+
+		hprsat_skip_space(line, offset);
+		if (line[offset] != ')')
+			return (true);
+		offset++;
+		hprsat_skip_space(line, offset);
+
+		output = temp.raisePower(floor(HPRSAT_PWR_UNIT * power));
+		return (false);
 	} else {
 		return (true);
 	}
@@ -196,7 +218,7 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
  * Parse everything until end, or between a pair of parenthesis.
  */
 static bool
-hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool haveAll)
+hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool haveAll, char termCh)
 {
 	bool haveParens;
 	bool sign;
@@ -234,7 +256,7 @@ hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool haveAll)
 
 		if (haveParens) {
 			if ((haveAll ? (line[offset] == '\0') :
-			     hprsat_test_and_skip(line, offset, ')'))) {
+			     hprsat_test_and_skip(line, offset, termCh))) {
 				if (lastOp == '*') {
 					temp[1] *= temp[0];
 					TAILQ_CONCAT(&output.head, &temp[1].head, entry);
@@ -268,6 +290,7 @@ hprsat_parse_add(std::string &line, size_t &offset, ADD &output, bool haveAll)
 int
 hprsat_parse(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *pmax, bool verbose)
 {
+	hprsat_val_t mod = 0;
 	std::string line;
 	ssize_t nexpr = 0;
 	size_t lineno = 0;
@@ -282,7 +305,22 @@ hprsat_parse(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *pmax, bool verbo
 			continue;
 		} else if (line[0] == '\0') {
 			continue;
+		} else if (line[0] == 'm' &&
+			   line[1] == 'o' &&
+			   line[2] == 'd') {
+			if (mod != 0)
+				goto error;
+			offset = 3;
+			hprsat_skip_space(line, offset);
+			mod = hprsat_read_value(line, offset);
+			if (mod <= 0)
+				goto error;
+			hprsat_set_global_modulus(mod);
+			continue;
 		}
+
+		if (mod <= 0)
+			goto error;
 	
 		ADD temp;
 
@@ -290,14 +328,8 @@ hprsat_parse(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *pmax, bool verbo
 
 		hprsat_skip_space(line, offset);
 
-		if (hprsat_parse_add(line, offset, temp, true)) {
-			if (verbose) {
-				std::cerr << "# Error parsing line " << lineno << ": '" <<
-					line << "' at offset " << offset << " '" << line[offset] << "'\n";
-			}
-			hprsat_free(phead);
-			return (EINVAL);
-		}
+		if (hprsat_parse_add(line, offset, temp, true))
+			goto error;
 
 		temp.sort().dup()->insert_tail(phead);
 		nexpr++;
@@ -310,4 +342,11 @@ hprsat_parse(std::istream &in, ADD_HEAD_t *phead, hprsat_var_t *pmax, bool verbo
 		std::cerr << "# Expressions = " << nexpr << "\n";
 	}
 	return (0);	/* success */
+error:
+	if (verbose) {
+		std::cerr << "# Error parsing line " << lineno << ": '" <<
+		    line << "' at offset " << offset << " '" << line[offset] << "'\n";
+	}
+	hprsat_free(phead);
+	return (EINVAL);
 }

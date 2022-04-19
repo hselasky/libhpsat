@@ -28,8 +28,8 @@
 static void
 hprsat_solve_simplify(ADD_HEAD_t *xhead, bool useProbability = false)
 {
-	while (hprsat_simplify_add(xhead, useProbability) ||
-	       hprsat_elevate_add(xhead))
+	while (hprsat_simplify_add(xhead, useProbability) /* ||
+	     hprsat_elevate_add(xhead) */)
 		;
 }
 
@@ -57,19 +57,28 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 	ADD *xb;
 	ADD *xn;
 
-	if (hprsat_global_modulus == 0)
-		hprsat_set_global_modulus(xhead);
-
-	std::cout << "# MODULUS " << hprsat_global_modulus << "\n";
-
+#if 0
 	/* Convert everything to binary equations. */
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
 		if (xa->toBinary().first() == 0)
 			delete xa->remove(xhead);
 	}
+#endif
+
+	printf("INPUT\n");
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+		xa->print(); std::cout << "\n";
+	}
 
 	hprsat_solve_simplify(xhead, useProbability);
+
+	printf("OUTPUT\n");
+	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
+		xn = xa->next();
+		xa->print(); std::cout << "\n";
+	}
 
 	for (hprsat_var_t v = 0; v != vm; v++) {
 
@@ -181,7 +190,7 @@ hprsat_solve_first(ADD_HEAD_t *xhead, uint8_t *psol, bool useProbability)
 
 				for (ADD *xb = xa->next(); xb->first(); xb = xb->next()) {
 					bool isNaN;
-					const hprsat_val_t test = ADD(*xb).expand_all(psol).getConst(isNaN, true);
+					const hprsat_val_t test = ADD(*xb).expand_all(psol).getConst(isNaN);
 					if (isNaN == false)
 						score[x] += abs(test);
 				}
