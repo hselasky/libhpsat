@@ -35,7 +35,7 @@ make -C apps/hpRsolve all install
 ### Example 1
 <pre>
 cat << EOF | hpRsolve -v -c
-mod 5
+mod 3
 v0 + v1 + sqrt(v2)
 EOF
 </pre>
@@ -43,7 +43,7 @@ EOF
 ### Example 2
 <pre>
 cat << EOF | hpRsolve -v -c
-mod 5
+mod 3
 v0 * cos(0.125) - v1 * cos(0.125)
 EOF
 </pre>
@@ -91,7 +91,7 @@ EOF
 Binary AND :: v2 = v1 & v0
 <pre>
 cat << EOF | hpRsolve -vc
-mod 5
+mod 3
 v2 - v1 * v0
 EOF
 </pre>
@@ -100,7 +100,7 @@ EOF
 Binary XOR :: v2 = v1 ^ v0
 <pre>
 cat << EOF | hpRsolve -vc
-mod 5
+mod 3
 v2 - v0 - v1 + (2 * v1 * v0)
 EOF
 </pre>
@@ -109,7 +109,7 @@ EOF
 Binary OR :: v2 = v1 | v0
 <pre>
 cat << EOF | hpRsolve -vc
-mod 5
+mod 3
 v2 - v0 - v1 + (v1 * v0)
 EOF
 </pre>
