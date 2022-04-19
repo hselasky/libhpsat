@@ -3,14 +3,14 @@
 This repository contains a library for working with logic and
 satisfiability equations. Operations supported:
 
-- Multiplication
-- Addition
-- Sinus
-- Square root
-- Subtraction
-- Cosinus
+- Multiplication (*)
+- Addition (+)
+- Sinus (sin(x))
+- Square root (sqrt(x))
+- Subtraction (-)
+- Cosinus (cos(x))
 - Fast Fourier Transform
-- Power
+- Power (pow(x,y))
 - Modulus
 
 Unlike other SAT libraries, this library tries to derive a solution by
