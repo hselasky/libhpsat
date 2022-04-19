@@ -131,6 +131,11 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
 		output = ADD(1, hprsat_read_size_value(line, offset));
 		hprsat_skip_space(line, offset);
 		return (false);
+	} else if (line[offset] == 'x') {
+		offset++;
+		output = ADD(1, hprsat_read_size_value(line, offset), HPRSAT_PWR_UNIT);
+		hprsat_skip_space(line, offset);
+		return (false);
 	} else if ((line[offset] >= '0' && line[offset] <= '9') ||
 		   (line[offset] == '-' &&
 		    line[offset+1] >= '0' && line[offset+1] <= '9')) {

@@ -297,10 +297,12 @@ public:
 		TAILQ_INIT(&head);
 		other.dup()->insert_tail(&head);
 	};
-	ADD(hprsat_val_t _factor, hprsat_var_t _var = HPRSAT_VAR_MIN) {
+	ADD(hprsat_val_t _factor,
+	    hprsat_var_t _var = HPRSAT_VAR_MIN,
+	    hprsat_pwr_t _pwr = (hprsat_global_mod - 1) * HPRSAT_PWR_UNIT) {
 		TAILQ_INIT(&head);
 		if (_factor != 0 || _var > HPRSAT_VAR_MIN)
-			(new MUL(_factor, _var))->insert_tail(&head);
+			(new MUL(_factor, _var, _pwr))->insert_tail(&head);
 	};
 	~ADD() {
 		hprsat_free(&head);
