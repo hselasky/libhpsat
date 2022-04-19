@@ -121,17 +121,20 @@ static bool
 hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
 {
 	if (line[offset] == '!' &&
-	    line[offset + 1] == 'v') {
+	    line[offset + 1] == 'v' &&
+	    (line[offset + 2] >= '0' && line[offset + 2] <= '9')) {
 		offset += 2;
 		output = !ADD(1, hprsat_read_size_value(line, offset));
 		hprsat_skip_space(line, offset);
 		return (false);
-	} else if (line[offset] == 'v') {
+	} else if (line[offset] == 'v' &&
+		   (line[offset + 1] >= '0' && line[offset + 1] <= '9')) {
 		offset++;
 		output = ADD(1, hprsat_read_size_value(line, offset));
 		hprsat_skip_space(line, offset);
 		return (false);
-	} else if (line[offset] == 'x') {
+	} else if (line[offset] == 'x' &&
+		   (line[offset + 1] >= '0' && line[offset + 1] <= '9')) {
 		offset++;
 		output = ADD(1, hprsat_read_size_value(line, offset), HPRSAT_PWR_UNIT);
 		hprsat_skip_space(line, offset);
@@ -172,6 +175,34 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
 
 		output = hprsat_cos_32(phase * (1ULL << 32));
 		return (false);
+	} else if (line[offset+0] == 'v' &&
+		   line[offset+1] == 'c' &&
+		   line[offset+2] == 'o' &&
+		   line[offset+3] == 's' &&
+		   line[offset+4] == '(') {
+		double phase;
+		hprsat_var_t var;
+
+		offset += 5;
+		phase = hprsat_read_double_value(line, offset);
+		hprsat_skip_space(line, offset);
+		if (line[offset] != ',')
+			return (true);
+		offset++;
+		hprsat_skip_space(line, offset);
+		if (line[offset] != 'v')
+			return (true);
+		offset++;
+		var = hprsat_read_size_value(line, offset);
+		hprsat_skip_space(line, offset);
+		if (line[offset] != ')')
+			return (true);
+		offset++;
+		hprsat_skip_space(line, offset);
+
+		phase -= floor(phase);
+		output = hprsat_cos_32(phase * (1ULL << 32), 0, var);
+		return (false);
 	} else if (line[offset] == 's' &&
 		   line[offset+1] == 'i' &&
 		   line[offset+2] == 'n' &&
@@ -189,6 +220,34 @@ hprsat_parse_single_mul(std::string &line, size_t &offset, ADD &output)
 		phase -= floor(phase);
 
 		output = hprsat_sin_32(phase * (1ULL << 32));
+		return (false);
+	} else if (line[offset+0] == 'v' &&
+		   line[offset+1] == 's' &&
+		   line[offset+2] == 'i' &&
+		   line[offset+3] == 'n' &&
+		   line[offset+4] == '(') {
+		double phase;
+		hprsat_var_t var;
+
+		offset += 5;
+		phase = hprsat_read_double_value(line, offset);
+		hprsat_skip_space(line, offset);
+		if (line[offset] != ',')
+			return (true);
+		offset++;
+		hprsat_skip_space(line, offset);
+		if (line[offset] != 'v')
+			return (true);
+		offset++;
+		var = hprsat_read_size_value(line, offset);
+		hprsat_skip_space(line, offset);
+		if (line[offset] != ')')
+			return (true);
+		offset++;
+		hprsat_skip_space(line, offset);
+
+		phase -= floor(phase);
+		output = hprsat_sin_32(phase * (1ULL << 32), 0, var);
 		return (false);
 	} else if (line[offset] == 'p' &&
 		   line[offset+1] == 'o' &&
