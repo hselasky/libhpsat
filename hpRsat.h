@@ -530,7 +530,7 @@ public:
 	ADD & align();
 	ADD & xform_fwd(hprsat_var_t);
 	ADD & xform_inv(hprsat_var_t);
-	ADD expandPower(hprsat_pwr_t);
+	ADD expandPower(hprsat_pwr_t = (hprsat_global_mod - 1) * HPRSAT_PWR_UNIT);
 	ADD raisePower(hprsat_pwr_t);
 	ADD & defactor();
 };
