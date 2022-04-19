@@ -617,7 +617,7 @@ public:
 
 typedef bool (hprsat_solve_callback_t)(void *, hprsat_val_t *);
 
-extern bool hprsat_solve(ADD_HEAD_t *, ADD_HEAD_t *, hprsat_var_t *, bool = false);
+extern bool hprsat_solve(ADD_HEAD_t *, ADD_HEAD_t *, hprsat_var_t *, bool = false, bool = false);
 extern bool hprsat_solve_first(ADD_HEAD_t *, hprsat_val_t *, bool = false);
 extern size_t hprsat_solve_count(ADD_HEAD_t *, hprsat_val_t *);
 extern bool hprsat_solve_callback(ADD *, hprsat_val_t *, hprsat_solve_callback_t *, void *);
