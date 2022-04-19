@@ -57,14 +57,12 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 	ADD *xb;
 	ADD *xn;
 
-#if 0
-	/* Convert everything to binary equations. */
+	/* Make sure all expressions are defactored. */
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
 		xn = xa->next();
-		if (xa->toBinary().first() == 0)
+		if (xa->defactor_all().first() == 0)
 			delete xa->remove(xhead);
 	}
-#endif
 
 	printf("INPUT\n");
 	for (xa = TAILQ_FIRST(xhead); xa; xa = xn) {
