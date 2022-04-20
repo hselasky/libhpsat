@@ -172,6 +172,12 @@ hprsat_solve(ADD_HEAD_t *xhead, ADD_HEAD_t *pderiv, hprsat_var_t *pvmax, bool us
 		TAILQ_CONCAT(&ahead, pderiv, entry);
 		TAILQ_CONCAT(pderiv, &ahead, entry);
 	}
+
+	printf("# REMAINDER\n");
+	for (xa = TAILQ_FIRST(xhead); xa != 0; xa = xn) {
+		xn = xa->next();
+		printf("# "); xa->print(); printf("\n");
+	}
 	return (TAILQ_FIRST(xhead) != 0);
 }
 
