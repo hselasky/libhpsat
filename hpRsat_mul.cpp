@@ -477,7 +477,7 @@ MUL :: operator /=(const MUL &other)
 	vb = other.vfirst();
 
 	while (va && vb) {
-		int ret = va->compare(*vb);
+		int ret = va->compare(*vb, true);
 		if (ret == 0) {
 			vn = va->next();
 			delete va->remove(&vhead);
