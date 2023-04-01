@@ -226,7 +226,7 @@ public:
 				continue;
 			}
 			if (bitmaps[x].getSt() != value) {
-				nummaps = 1;
+				nummaps = 2;
 				bitmaps[0].state = 0;
 				bitmaps[1].state = 1;
 				return (*this);
